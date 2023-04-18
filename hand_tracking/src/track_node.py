@@ -12,6 +12,7 @@ class tracker_node():
     def __init__(self):
         rospy.on_shutdown(self.cleanup) 
         ### Suscriber
+        self.image_sub = rospy.Subscriber("/camera/color/image_raw",Image,self.camera_callback) 
         self.image_sub = rospy.Subscriber("/usb_cam/image_raw",Image,self.camera_callback) 
         
         ### Publishers
@@ -38,8 +39,14 @@ class tracker_node():
         print('initialized node')
 
         while not rospy.is_shutdown():
+            if self.image_received == 0:
+                print('Image not received')
+                
+                continue
             with self.mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5) as self.hands: 
                 self.image_processing()
+                self.publish()
+            
             r.sleep()
 
     def rising_hand(self,array1):
@@ -52,9 +59,7 @@ class tracker_node():
 
     def image_processing(self):
         
-        if self.image_received == 0:
-            print('Image not received')
-            return
+        
         image = self.cv_image
         # BGR 2 RGB
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -88,13 +93,18 @@ class tracker_node():
                               
 
         # Publish image    
-        image_message = self.bridge_object.cv2_to_imgmsg(image, encoding="passthrough")
-        self.image_position_pub.publish(image_message)
+        self.image_message = self.bridge_object.cv2_to_imgmsg(image, encoding="passthrough")
+        
+        self.coordinates_hands = np.zeros((2,1))
+    
+    def publish(self):
+       
+        self.image_position_pub.publish(self.image_message)
         
         os.system('clear') 
         print('Max coord: ',self.max_coord)
-        self.coordinates_hands = np.zeros((2,1))
-    
+
+
     def camera_callback(self,data):
         try:
             self.cv_image = self.bridge_object.imgmsg_to_cv2(data, desired_encoding="bgr8")

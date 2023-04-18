@@ -3,10 +3,7 @@ import mediapipe as mp
 import numpy as np
 import cv2
 import rospy 
-from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import Twist
 import os
-from tf2_geometry_msgs import PointStamped
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
@@ -48,7 +45,9 @@ class tracker_node():
     def rising_hand(self,array1):
         max = np.argmax(array1[1])
         coord = array1[:,max]
-        self.max_coord = str(int(coord[0]))+','+str(int(coord[1]))
+        self.coordx = int(coord[0])
+        self.coordy = self.image_height - int(coord[1]) 
+        self.max_coord = str(self.coordx)+','+str(self.coordy)
         
 
     def image_processing(self):
@@ -72,29 +71,19 @@ class tracker_node():
         
         
         # Rendering results
-        if results.multi_hand_landmarks:
-            for num, hand in enumerate(results.multi_hand_landmarks):
-                self.mp_drawing.draw_landmarks(image, hand, self.mp_hands.HAND_CONNECTIONS, 
-                                        self.mp_drawing.DrawingSpec(color=(121, 22, 76), thickness=2, circle_radius=4),
-                                        self.mp_drawing.DrawingSpec(color=(250, 44, 250), thickness=2, circle_radius=2),
-                                         )
-                         
-            c = 30
+        if results.multi_hand_landmarks:                         
+            
             i = 0
             
             for hand_landmarks in results.multi_hand_landmarks:
                 #Obtain coordinates of middle finger MCP
                 x = hand_landmarks.landmark[self.mp_hands.HandLandmark.MIDDLE_FINGER_MCP].x * self.image_width
                 y = self.image_height - (hand_landmarks.landmark[self.mp_hands.HandLandmark.MIDDLE_FINGER_MCP].y * self.image_height)
-                self.coordinates_hands = np.insert(self.coordinates_hands, i, [x,y], axis=1)
-                text = (self.coordinates_hands[0,i], self.coordinates_hands[1,i])
-                text = str(text)
-                coordinates = (30,c)
-                image = cv2.putText(image, text, coordinates, self.font, self.fontScale, self.color, self.thickness, cv2.LINE_AA)
-                c = c+20                  
+                self.coordinates_hands = np.insert(self.coordinates_hands, i, [x,y], axis=1)               
                 i = i+1        
 
             self.rising_hand(self.coordinates_hands)
+            image = cv2.circle(image, (self.coordx,self.coordy), 10, (0,0,255), 3)
 
                               
 
@@ -102,16 +91,6 @@ class tracker_node():
         image_message = self.bridge_object.cv2_to_imgmsg(image, encoding="passthrough")
         self.image_position_pub.publish(image_message)
         
-        if cv2.waitKey(10) & 0xFF == ord(' '):
-            # print(results.multi_hand_landmarks)
-            if results.multi_hand_landmarks is not None:
-                for hand_landmarks in results.multi_hand_landmarks:
-                    # Position of landmark in middle finger MCP
-                    
-                    print( self.coordinates_hands[0], self.coordinates_hands[1])
-                    #("Dimensions: ", image_width, image_height)
-        elif cv2.waitKey(10) & 0xFF == ord('q'):
-            return
         os.system('clear') 
         print('Max coord: ',self.max_coord)
         self.coordinates_hands = np.zeros((2,1))

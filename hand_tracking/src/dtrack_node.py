@@ -124,7 +124,6 @@ class tracker_node():
             print(self.dep.shape)
             print('The hand is at {} cm'.format(self.hand_depth))
 
-
     def camera_callback(self,data):
         try:
             self.cv_image = self.bridge_object.imgmsg_to_cv2(data, desired_encoding="bgr8")

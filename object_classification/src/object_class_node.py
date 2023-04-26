@@ -20,7 +20,7 @@ class object_cls_node():
         
         ### Constants
         self.confidence_threshold = 0.75
-        self.model = tensorflow.keras.models.load_model("model_class_object.h5", compile=False)
+        self.model = tensorflow.keras.models.load_model("/home/oem/coral_ws/src/object_classification/src/model_class_object.h5", compile=False)
 
         ### Variables
         self.part_num = 0
@@ -84,6 +84,7 @@ class object_cls_node():
 
         os.system('clear') 
         print('Part number: ',self.part_num)
+        print('Confidence: ', self.confidence_score)
 
     def camera_callback(self,data):
         try:

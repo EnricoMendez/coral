@@ -29,9 +29,11 @@ class tracker_node():
         ### Variables
         self.image_received = 0
         self.dep_received = 0
-        self.centerPoint2 = None 
+        self.centerPoint2 = None
         self.centerPoint1 = None
-        self.max_coord = 0
+        self.max_coord = (None,None)
+        self.hands_array = None
+        self.hand_depth = None
         
         ###********** INIT NODE **********###  
         r = rospy.Rate(10)
@@ -43,19 +45,21 @@ class tracker_node():
                 print(self.image_received)
                 print('Image not received')
                 continue
-            self.hands, self.image = self.detector.findHands(self.image_cv, flipType=0, )  # with draw
+            self.hands, self.image = self.detector.findHands(self.cv_image, flipType=0, )  # with draw
             self.image_processing()
             self.publish()
             r.sleep()
 
     def risen_hand(self, hands_array):
-        if self.hands_array[1] is None:
-            self.max_coord = self.hands_array[0]
+        if hands_array[1] is None:
+            return hands_array[0]
         else:
-            self.max_coord = min((self.hands_array[0], self.hands_array[1]), key=lambda x: x[1])
+            return min((hands_array[0], hands_array[1]), key=lambda x: x[1])
+
 
     def image_processing(self):
         
+        self.max_coord = None, None
         self.dep = self.depth_array
 
         if self.hands: #Obtain dictionary with all data given per hand
@@ -71,8 +75,12 @@ class tracker_node():
             self.max_coord = self.risen_hand(self.hands_array)
 
         # Publish image    
-        self.image = cv2.circle(self.cv_image, (self.coordx,self.coordy), 10, (0,0,255), 3)
+        if self.max_coord[0] is not None:
+            self.image = cv2.circle(self.cv_image, (self.max_coord[0],self.max_coord[1]), 10, (0,0,255), 3)
+        else: 
+            self.image = self.cv_image
         self.image_message = self.bridge_object.cv2_to_imgmsg(self.image, encoding="passthrough")
+
 
     def publish(self):
        
@@ -83,13 +91,16 @@ class tracker_node():
         print('Max coord: ',self.max_coord)
         
         # Depth hand calculation
-        if self.max_coord[0] * self.max_coord[1] > 0:
+        if self.max_coord[0] is not None:
             x = self.max_coord[0] * self.depx / self.image_width
             y = self.max_coord[1] * self.depy / self.image_height
 
             self.hand_depth = self.dep[int(y),int(x)] / 10
-            print(self.dep.shape)
             print('The hand is at {} cm'.format(self.hand_depth))
+
+        self.hand_position =(self.max_coord[0], self.max_coord[1], self.hand_depth)
+        if self.hand_position[0] is not None:
+            self.hand_position_pub.publish(str(self.hand_position))
 
     def camera_callback(self,data):
         try:

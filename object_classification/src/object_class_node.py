@@ -1,11 +1,12 @@
-from std_msgs.msg import String, Int32
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge, CvBridgeError
-import tensorflow 
+#!/usr/bin/env python3
+import tensorflow
 import cv2
 import numpy as np
 import os
 import rospy
+from std_msgs.msg import Int32
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
 
 
 class object_cls_node():
@@ -15,10 +16,10 @@ class object_cls_node():
         self.image_sub = rospy.Subscriber("/usb_cam/image_raw",Image,self.camera_callback) 
         
         ### Publishers
-        #self.object_num_pub = rospy.Publisher("object_num", Int32, queue_size=1)
+        self.object_num_pub = rospy.Publisher("object_num", Int32, queue_size=1)
         
         ### Constants
-        self.confidence_threshold = 0.80
+        self.confidence_threshold = 0.75
         self.model = tensorflow.keras.models.load_model("model_class_object.h5", compile=False)
 
         ### Variables
@@ -35,8 +36,9 @@ class object_cls_node():
         while not rospy.is_shutdown():
             if self.image_received == 0:
                 print('Image not received')
-                self.image_processing()
-                self.publish()
+                continue
+            self.image_processing()
+            self.publish()
             r.sleep()
 
     def object_class(self,image):
@@ -75,10 +77,10 @@ class object_cls_node():
         image = np.asarray(image, dtype=np.float32).reshape(1, 224, 224, 3)
         # Normalize the image array
         image = (image / 127.5) - 1
-        self.object_class(self, image)
+        self.object_class(image)
 
     def publish(self):
-        #cself.object_num_pub.publish(self.part_num)
+        self.object_num_pub.publish(self.part_num)
 
         os.system('clear') 
         print('Part number: ',self.part_num)

@@ -19,7 +19,7 @@ class object_cls_node():
         self.object_num_pub = rospy.Publisher("object_num", Int32, queue_size=1)
         
         ### Constants
-        self.confidence_threshold = 0.75
+        self.confidence_threshold = 0.80
         self.model = tensorflow.keras.models.load_model("model_class_object.h5", compile=False)
 
         ### Variables
@@ -84,6 +84,7 @@ class object_cls_node():
 
         os.system('clear') 
         print('Part number: ',self.part_num)
+        print('Confidence: ', self.confidence_score)
 
     def camera_callback(self,data):
         try:

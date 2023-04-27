@@ -2,6 +2,7 @@
 import mediapipe as mp
 import numpy as np
 import cv2
+from cvzone.HandTrackingModule import HandDetector
 import rospy 
 import os
 from std_msgs.msg import String
@@ -23,18 +24,14 @@ class tracker_node():
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_hands = mp.solutions.hands
         self.bridge_object = CvBridge() # create the cv_bridge object
-        self.font = cv2.FONT_HERSHEY_SIMPLEX
-        self.fontScale = 0.5
-        self.color = (0,0,0)
-        self.thickness = 1
+        self.detector = HandDetector(detectionCon=0.8, maxHands=2)
         
         ### Variables
         self.image_received = 0
         self.dep_received = 0
-        self.coordinates_hands = np.zeros((2,1))
-        self.max_coord = ''
-        self.coordx = 0
-        self.coordy = 0
+        self.centerPoint2 = None 
+        self.centerPoint1 = None
+        self.max_coord = 0
         
         ###********** INIT NODE **********###  
         r = rospy.Rate(10)
@@ -46,87 +43,58 @@ class tracker_node():
                 print(self.image_received)
                 print('Image not received')
                 continue
-            with self.mp_hands.Hands(min_detection_confidence=0.6, min_tracking_confidence=0.5) as self.hands: 
-                self.image_processing()
-                self.publish()
+            self.hands, self.image = self.detector.findHands(self.image_cv, flipType=0, )  # with draw
+            self.image_processing()
+            self.publish()
             r.sleep()
 
-    def rising_hand(self,array1):
-        max = np.argmax(array1[1])
-        coord = array1[:,max]
-        self.coordx = int(coord[0])
-        self.coordy = self.image_height - int(coord[1]) 
-        self.max_coord = str(self.coordx)+','+str(self.coordy)
-        
+    def risen_hand(self, hands_array):
+        if self.hands_array[1] is None:
+            self.max_coord = self.hands_array[0]
+        else:
+            self.max_coord = min((self.hands_array[0], self.hands_array[1]), key=lambda x: x[1])
+
     def image_processing(self):
         
         self.dep = self.depth_array
-        image = self.cv_image
-        # BGR 2 RGB
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        # Flip on horizontal
-        # image = cv2.flip(image, 1)
-        # Set flag
-        image.flags.writeable = False
-        # Detections
-        results = self.hands.process(image)
-        # Set flag to true
-        image.flags.writeable = True
-        # RGB 2 BGR
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        
-        # Rendering results
-        if results.multi_hand_landmarks:                         
-            
-            i = 0
-            
-            for hand_landmarks in results.multi_hand_landmarks:
-                #Obtain coordinates of middle finger MCP
-                x = hand_landmarks.landmark[self.mp_hands.HandLandmark.MIDDLE_FINGER_MCP].x * self.image_width
-                y = self.image_height - (hand_landmarks.landmark[self.mp_hands.HandLandmark.MIDDLE_FINGER_MCP].y * self.image_height)
-                self.coordinates_hands = np.insert(self.coordinates_hands, i, [x,y], axis=1)               
-                i = i+1        
 
-            self.rising_hand(self.coordinates_hands)
-            image = cv2.circle(image, (self.coordx,self.coordy), 10, (0,0,255), 3)
+        if self.hands: #Obtain dictionary with all data given per hand
+            # Hand 1
+            hand1 = self.hands[0]
+            self.centerPoint1 = hand1['center']  # center of the hand cx,cy  
+            
+            if len(self.hands) == 2:
+                # Hand 2
+                hand2 = self.hands[1]
+                self.centerPoint2 = hand2['center']  # center of the hand cx,
+            self.hands_array = (self.centerPoint1, self.centerPoint2)
+            self.max_coord = self.risen_hand(self.hands_array)
 
         # Publish image    
-        self.image_message = self.bridge_object.cv2_to_imgmsg(image, encoding="passthrough")
-        
-        self.coordinates_hands = np.zeros((2,1))
-    
+        self.image = cv2.circle(self.cv_image, (self.coordx,self.coordy), 10, (0,0,255), 3)
+        self.image_message = self.bridge_object.cv2_to_imgmsg(self.image, encoding="passthrough")
+
     def publish(self):
        
         # Image publisher
         self.image_position_pub.publish(self.image_message)
-        
+
         os.system('clear') 
         print('Max coord: ',self.max_coord)
         
         # Depth hand calculation
-        if self.coordx * self.coordy > 0:
-            x = self.coordx * self.depx / self.image_width
-            y = self.coordy * self.depy / self.image_height
-
-            print('coordx: ',self.coordx)
-            print('coordy: ',self.coordy)
-
-            print('Image width: ',self.image_width)
-            print('Image height: ',self.image_height)
-            
-            print('depx',self.depx)
-            print('depy',self.depy)
-            
-            print('X es :',x)
-            print('y es :',y)
+        if self.max_coord[0] * self.max_coord[1] > 0:
+            x = self.max_coord[0] * self.depx / self.image_width
+            y = self.max_coord[1] * self.depy / self.image_height
 
             self.hand_depth = self.dep[int(y),int(x)] / 10
-            #print(self.dep.shape)
+            print(self.dep.shape)
             print('The hand is at {} cm'.format(self.hand_depth))
 
     def camera_callback(self,data):
         try:
             self.cv_image = self.bridge_object.imgmsg_to_cv2(data, desired_encoding="bgr8")
+
         except CvBridgeError as e:
             print(e) 
         if self.image_received == 0:

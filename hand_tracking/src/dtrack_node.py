@@ -46,7 +46,7 @@ class tracker_node():
                 print(self.image_received)
                 print('Image not received')
                 continue
-            with self.mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5) as self.hands: 
+            with self.mp_hands.Hands(min_detection_confidence=0.6, min_tracking_confidence=0.5) as self.hands: 
                 self.image_processing()
                 self.publish()
             r.sleep()
@@ -107,18 +107,6 @@ class tracker_node():
         if self.coordx * self.coordy > 0:
             x = self.coordx * self.depx / self.image_width
             y = self.coordy * self.depy / self.image_height
-
-            print('coordx: ',self.coordx)
-            print('coordy: ',self.coordy)
-
-            print('Image width: ',self.image_width)
-            print('Image height: ',self.image_height)
-            
-            print('depx',self.depx)
-            print('depy',self.depy)
-            
-            print('X es :',x)
-            print('y es :',y)
 
             self.hand_depth = self.dep[int(y),int(x)] / 10
             print(self.dep.shape)

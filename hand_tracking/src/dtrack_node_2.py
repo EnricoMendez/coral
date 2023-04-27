@@ -48,7 +48,6 @@ class tracker_node():
             self.publish()
             r.sleep()
 
-        
     def risen_hand(self, hands_array):
         if self.hands_array[1] is None:
             self.max_coord = self.hands_array[0]
@@ -58,7 +57,6 @@ class tracker_node():
     def image_processing(self):
         
         self.dep = self.depth_array
-
 
         if self.hands: #Obtain dictionary with all data given per hand
             # Hand 1
@@ -70,12 +68,12 @@ class tracker_node():
                 hand2 = self.hands[1]
                 self.centerPoint2 = hand2['center']  # center of the hand cx,
             self.hands_array = (self.centerPoint1, self.centerPoint2)
-            self.max_coord = risen_hand(self.hands_array)
+            self.max_coord = self.risen_hand(self.hands_array)
 
         # Publish image    
+        self.image = cv2.circle(self.cv_image, (self.coordx,self.coordy), 10, (0,0,255), 3)
         self.image_message = self.bridge_object.cv2_to_imgmsg(self.image, encoding="passthrough")
 
-        
     def publish(self):
        
         # Image publisher

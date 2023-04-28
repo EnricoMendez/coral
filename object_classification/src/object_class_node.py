@@ -20,6 +20,7 @@ class object_cls_node():
         self.object_num_pub = rospy.Publisher("object_num", Int32, queue_size=1)
         
         ### Constants
+<<<<<<< HEAD
         self.confidence_threshold = 0.75
         # get an instance of RosPack with the default search paths
         rospack = rospkg.RosPack()
@@ -31,6 +32,10 @@ class object_cls_node():
         self.model = tensorflow.keras.models.load_model(model_path, compile=False)
         
 
+=======
+        self.confidence_threshold = 0.80
+        self.model = tensorflow.keras.models.load_model("model_class_object.h5", compile=False)
+>>>>>>> 45509fe51058baa9e4b75f62bbc46fe7c5673a28
 
         ### Variables
         self.part_num = 0

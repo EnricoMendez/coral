@@ -7,6 +7,7 @@ import rospy
 from std_msgs.msg import Int32
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
+import rospkg
 
 
 class object_cls_node():
@@ -20,7 +21,16 @@ class object_cls_node():
         
         ### Constants
         self.confidence_threshold = 0.75
-        self.model = tensorflow.keras.models.load_model("/home/oem/coral_ws/src/object_classification/src/model_class_object.h5", compile=False)
+        # get an instance of RosPack with the default search paths
+        rospack = rospkg.RosPack()
+        # list all packages, equivalent to rospack list
+        rospack.list() 
+        # get the file path for this ros pkg
+        pkg_path = str(rospack.get_path('hand_tracking'))
+        model_path = pkg_path + '/src/model_class_object.h5'
+        self.model = tensorflow.keras.models.load_model(model_path, compile=False)
+        
+
 
         ### Variables
         self.part_num = 0

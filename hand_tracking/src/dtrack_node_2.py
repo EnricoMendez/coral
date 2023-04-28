@@ -65,12 +65,13 @@ class tracker_node():
         if self.hands: #Obtain dictionary with all data given per hand
             # Hand 1
             hand1 = self.hands[0]
-            self.centerPoint1 = hand1['center']  # center of the hand cx,cy  
+            self.centerPoint1 = hand1["lmList"][9][:2]  # center of the hand cx,cy  
             
             if len(self.hands) == 2:
                 # Hand 2
                 hand2 = self.hands[1]
-                self.centerPoint2 = hand2['center']  # center of the hand cx,
+                self.centerPoint2 = hand2["lmList"][9][:2] # center of the hand cx, cy
+
             self.hands_array = (self.centerPoint1, self.centerPoint2)
             self.max_coord = self.risen_hand(self.hands_array)
 
@@ -94,7 +95,8 @@ class tracker_node():
         if self.max_coord[0] is not None:
             x = self.max_coord[0] * self.depx / self.image_width
             y = self.max_coord[1] * self.depy / self.image_height
-
+            print("x:", x, "x: ", y)
+            print(self.dep[int(y),int(x)])
             self.hand_depth = self.dep[int(y),int(x)] / 10
             print('The hand is at {} cm'.format(self.hand_depth))
 

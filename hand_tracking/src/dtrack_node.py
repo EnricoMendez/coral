@@ -109,7 +109,7 @@ class tracker_node():
             y = self.coordy * self.depy / self.image_height
 
             self.hand_depth = self.dep[int(y),int(x)] / 10
-            print(self.dep.shape)
+            #print(self.dep.shape)
             print('The hand is at {} cm'.format(self.hand_depth))
 
     def camera_callback(self,data):

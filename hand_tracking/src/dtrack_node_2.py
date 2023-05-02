@@ -34,6 +34,12 @@ class tracker_node():
         self.max_coord = (None,None)
         self.hands_array = None
         self.hand_depth = None
+        self.coord_x_hand1 = None
+        self.coord_x_hand2 = None
+        self.coord_y_hand1 = None
+        self.coord_y_hand2 = None
+        self.hand1 = None
+        self.hand2 = None
         
         ###********** INIT NODE **********###  
         r = rospy.Rate(10)
@@ -45,7 +51,7 @@ class tracker_node():
                 print(self.image_received)
                 print('Image not received')
                 continue
-            self.hands, self.image = self.detector.findHands(self.cv_image, flipType=0, )  # with draw
+            self.hands, nimage = self.detector.findHands(self.cv_image, flipType=0, )  # with draw
             self.image_processing()
             self.publish()
             r.sleep()
@@ -56,24 +62,47 @@ class tracker_node():
         else:
             return min((hands_array[0], hands_array[1]), key=lambda x: x[1])
 
-
     def image_processing(self):
         
         self.max_coord = None, None
         self.dep = self.depth_array
 
+        self.hands_array = (None, None)
+        self.coord_x_hand1 = 0
+        self.coord_x_hand2 = 0
+        self.coord_y_hand1 = 0
+        self.coord_y_hand2 = 0
+
         if self.hands: #Obtain dictionary with all data given per hand
             # Hand 1
-            hand1 = self.hands[0]
-            self.centerPoint1 = hand1["lmList"][9][:2]  # center of the hand cx,cy  
+            self.hand1 = self.hands[0]
             
             if len(self.hands) == 2:
                 # Hand 2
-                hand2 = self.hands[1]
-                self.centerPoint2 = hand2["lmList"][9][:2] # center of the hand cx, cy
+                self.hand2 = self.hands[1]
+            
+
+            for i in (0,1,5,9,13,17):
+                self.coord_x_hand1 = self.coord_x_hand1 + (self.hand1["lmList"][i][0])
+                print(self.coord_x_hand1)
+                self.coord_y_hand1 = self.coord_y_hand1 + (self.hand1["lmList"][i][1])
+
+                if self.hand2:
+                    self.coord_x_hand2 = self.coord_x_hand2 + (self.hand2["lmList"][i][0])
+                    self.coord_y_hand2 = self.coord_y_hand2 + (self.hand2["lmList"][i][1])
+
+            self.coord_x_hand1 = int(self.coord_x_hand1 / 6)
+            self.coord_y_hand1 = int(self.coord_y_hand1 / 6)
+            self.centerPoint1 = (self.coord_x_hand1,self.coord_y_hand1)  # center of the hand cx,cy  
+            if self.hand2:
+                self.coord_x_hand2 = int(self.coord_x_hand2 / 6)
+                self.coord_y_hand2 = int(self.coord_y_hand2 / 6)
+                self.centerPoint2 = (self.coord_x_hand2,self.coord_y_hand2)  # center of the hand cx,cy  
 
             self.hands_array = (self.centerPoint1, self.centerPoint2)
             self.max_coord = self.risen_hand(self.hands_array)
+            print(self.hands_array)
+            print(self.max_coord)
 
         # Publish image    
         if self.max_coord[0] is not None:
@@ -82,21 +111,18 @@ class tracker_node():
             self.image = self.cv_image
         self.image_message = self.bridge_object.cv2_to_imgmsg(self.image, encoding="passthrough")
 
-
     def publish(self):
        
         # Image publisher
         self.image_position_pub.publish(self.image_message)
 
-        os.system('clear') 
+        #os.system('clear') 
         print('Max coord: ',self.max_coord)
         
         # Depth hand calculation
         if self.max_coord[0] is not None:
             x = self.max_coord[0] * self.depx / self.image_width
             y = self.max_coord[1] * self.depy / self.image_height
-            print("x:", x, "x: ", y)
-            print(self.dep[int(y),int(x)])
             self.hand_depth = self.dep[int(y),int(x)] / 10
             print('The hand is at {} cm'.format(self.hand_depth))
 

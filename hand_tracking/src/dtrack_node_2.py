@@ -34,10 +34,10 @@ class tracker_node():
         self.max_coord = (None,None)
         self.hands_array = None
         self.hand_depth = None
-        self.coord_x_hand1 = None
-        self.coord_x_hand2 = None
-        self.coord_y_hand1 = None
-        self.coord_y_hand2 = None
+        self.coord_x_hand1 = 0
+        self.coord_x_hand2 = 0
+        self.coord_y_hand1 = 0
+        self.coord_y_hand2 = 0
         self.hand1 = None
         self.hand2 = None
         
@@ -57,6 +57,7 @@ class tracker_node():
             r.sleep()
 
     def risen_hand(self, hands_array):
+        print(self.hands_array)
         if hands_array[1] is None:
             return hands_array[0]
         else:
@@ -65,44 +66,28 @@ class tracker_node():
     def image_processing(self):
         
         self.max_coord = None, None
+        self.hands_array = None, None
+        self.centerPoint1 = None
+        self.centerPoint2 = None
         self.dep = self.depth_array
-
-        self.hands_array = (None, None)
-        self.coord_x_hand1 = 0
-        self.coord_x_hand2 = 0
-        self.coord_y_hand1 = 0
-        self.coord_y_hand2 = 0
 
         if self.hands: #Obtain dictionary with all data given per hand
             # Hand 1
+
             self.hand1 = self.hands[0]
+            self.coord_x_hand1 = self.hand1["lmList"][9][0]
+            self.coord_y_hand1 = self.hand1["lmList"][9][1]
+            self.centerPoint1 = (self.coord_x_hand1,self.coord_y_hand1)  # center of the hand cx,cy  
             
             if len(self.hands) == 2:
                 # Hand 2
                 self.hand2 = self.hands[1]
-            
-
-            for i in (0,1,5,9,13,17):
-                self.coord_x_hand1 = self.coord_x_hand1 + (self.hand1["lmList"][i][0])
-                print(self.coord_x_hand1)
-                self.coord_y_hand1 = self.coord_y_hand1 + (self.hand1["lmList"][i][1])
-
-                if self.hand2:
-                    self.coord_x_hand2 = self.coord_x_hand2 + (self.hand2["lmList"][i][0])
-                    self.coord_y_hand2 = self.coord_y_hand2 + (self.hand2["lmList"][i][1])
-
-            self.coord_x_hand1 = int(self.coord_x_hand1 / 6)
-            self.coord_y_hand1 = int(self.coord_y_hand1 / 6)
-            self.centerPoint1 = (self.coord_x_hand1,self.coord_y_hand1)  # center of the hand cx,cy  
-            if self.hand2:
-                self.coord_x_hand2 = int(self.coord_x_hand2 / 6)
-                self.coord_y_hand2 = int(self.coord_y_hand2 / 6)
-                self.centerPoint2 = (self.coord_x_hand2,self.coord_y_hand2)  # center of the hand cx,cy  
+                self.coord_x_hand2 = self.hand2["lmList"][9][0]
+                self.coord_y_hand2 = self.hand2["lmList"][9][1]
+                self.centerPoint2 = (self.coord_x_hand2,self.coord_y_hand2) 
 
             self.hands_array = (self.centerPoint1, self.centerPoint2)
             self.max_coord = self.risen_hand(self.hands_array)
-            print(self.hands_array)
-            print(self.max_coord)
 
         # Publish image    
         if self.max_coord[0] is not None:
@@ -116,14 +101,16 @@ class tracker_node():
         # Image publisher
         self.image_position_pub.publish(self.image_message)
 
-        #os.system('clear') 
+        os.system('clear') 
         print('Max coord: ',self.max_coord)
         
         # Depth hand calculation
         if self.max_coord[0] is not None:
-            x = self.max_coord[0] * self.depx / self.image_width
-            y = self.max_coord[1] * self.depy / self.image_height
-            self.hand_depth = self.dep[int(y),int(x)] / 10
+            x = int(self.max_coord[0] * self.depx / self.image_width)
+            y = int(self.max_coord[1] * self.depy / self.image_height)
+            if (0 < y < 480) and (0 < x < 848):
+                if 150 >  (self.dep[y, x] / 10) > 0:
+                    self.hand_depth = self.dep[y, x] / 10
             print('The hand is at {} cm'.format(self.hand_depth))
 
         self.hand_position =(self.max_coord[0], self.max_coord[1], self.hand_depth)
@@ -133,7 +120,7 @@ class tracker_node():
     def camera_callback(self,data):
         try:
             self.cv_image = self.bridge_object.imgmsg_to_cv2(data, desired_encoding="bgr8")
-
+        
         except CvBridgeError as e:
             print(e) 
         if self.image_received == 0:

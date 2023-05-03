@@ -8,7 +8,7 @@ import os
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
-
+ 
 class tracker_node():
     def __init__(self):
         rospy.on_shutdown(self.cleanup) 

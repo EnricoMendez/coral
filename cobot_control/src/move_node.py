@@ -1,59 +1,25 @@
 #!/usr/bin/env python3
 
-# -- BEGIN LICENSE BLOCK ----------------------------------------------
-# Copyright 2021 FZI Forschungszentrum Informatik
-# Created on behalf of Universal Robots A/S
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# -- END LICENSE BLOCK ------------------------------------------------
-#
-# ---------------------------------------------------------------------
-# !\file
-#
-# \author  Felix Exner mauch@fzi.de
-# \date    2021-08-05
-#
-#
-# ---------------------------------------------------------------------
+
 import sys
 
-import rospy
 import actionlib
-from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
-from trajectory_msgs.msg import JointTrajectoryPoint
-from controller_manager_msgs.srv import SwitchControllerRequest, SwitchController
-from controller_manager_msgs.srv import LoadControllerRequest, LoadController
-from controller_manager_msgs.srv import ListControllers, ListControllersRequest
 import geometry_msgs.msg as geometry_msgs
-from cartesian_control_msgs.msg import (
-    FollowCartesianTrajectoryAction,
-    FollowCartesianTrajectoryGoal,
-    CartesianTrajectoryPoint,
-)
+import rospy
+from std_msgs.msg import Float32MultiArray
+from cartesian_control_msgs.msg import (CartesianTrajectoryPoint,
+                                        FollowCartesianTrajectoryAction,
+                                        FollowCartesianTrajectoryGoal)
+from control_msgs.msg import (FollowJointTrajectoryAction,
+                              FollowJointTrajectoryGoal)
+from controller_manager_msgs.srv import (ListControllers,
+                                         ListControllersRequest,
+                                         LoadController, LoadControllerRequest,
+                                         SwitchController,
+                                         SwitchControllerRequest)
+from trajectory_msgs.msg import JointTrajectoryPoint
 
-# Compatibility for python2 and python3
-if sys.version_info[0] < 3:
-    input = raw_input
 
-# If your robot description is created with a tf_prefix, those would have to be adapted
-JOINT_NAMES = [
-    "shoulder_pan_joint",
-    "shoulder_lift_joint",
-    "elbow_joint",
-    "wrist_1_joint",
-    "wrist_2_joint",
-    "wrist_3_joint",
-]
 
 # All of those controllers can be used to execute joint-based trajectories.
 # The scaled versions should be preferred over the non-scaled versions.
@@ -79,26 +45,15 @@ CONFLICTING_CONTROLLERS = ["joint_group_vel_controller", "twist_controller"]
 
 
 class TrajectoryClient:
-    """Small trajectory client to test a joint trajectory"""
+    
 
     def __init__(self):
         
         ### Constantes
 
-        x0 = -.36
-        x1 = 0.33
-        y0 = -.23
-        y1 = -.62
-        z0 = .19
-        z1 = .41
-
-        x = .7
-        y = .5
-        z = .5
-
-        self.posex = x * (x1-x0) + x0
-        self.posey = y * (y1-y0) + y0
-        self.posez = z * (z1-z0) + z0
+        self.posex = 0
+        self.posey = 0
+        self.posez = 0
 
         self.ori_x= 0.00044673384424923
         self.ori_y= -0.9999965860768489
@@ -106,6 +61,9 @@ class TrajectoryClient:
         self.ori_w= 0.00247984406432194
         
         rospy.init_node("test_move")
+        print('Node init')
+
+        rospy.Subscriber("/coordinates_coral",Float32MultiArray,self.callback_coordinates)
 
 
         timeout = rospy.Duration(5)
@@ -120,8 +78,10 @@ class TrajectoryClient:
             rospy.logerr("Could not reach controller switch service. Msg: {}".format(err))
             sys.exit(-1)
 
-        self.joint_trajectory_controller = JOINT_TRAJECTORY_CONTROLLERS[0]
         self.cartesian_trajectory_controller = CARTESIAN_TRAJECTORY_CONTROLLERS[0]
+        r = rospy.Rate(10)
+        while not rospy.is_shutdown():
+            r.sleep()
 
     def send_cartesian_trajectory(self):
         """Creates a Cartesian trajectory and sends it using the selected action server"""
@@ -166,14 +126,6 @@ class TrajectoryClient:
 
         rospy.loginfo("Trajectory execution finished in state {}".format(result.error_code))
 
-    ###############################################################################################
-    #                                                                                             #
-    # Methods defined below are for the sake of safety / flexibility of this demo script only.    #
-    # If you just want to copy the relevant parts to make your own motion script you don't have   #
-    # to use / copy all the functions below.                                                       #
-    #                                                                                             #
-    ###############################################################################################
-
     def switch_controller(self, target_controller):
         """Activates the desired controller and stops all others from the predefined list above"""
         other_controllers = (
@@ -200,10 +152,29 @@ class TrajectoryClient:
         srv.strictness = SwitchControllerRequest.BEST_EFFORT
         self.switch_srv(srv)
 
+    def callback_coordinates(self,msg):
+        print('info recieved')
+        x0 = -.36
+        x1 = 0.33
+        y0 = -.23
+        y1 = -.62
+        z0 = .19
+        z1 = .41
+
+        x = msg.data[0]
+        y = msg.data[1]
+        z = msg.data[2]
+
+        self.posex = x * (x1-x0) + x0
+        self.posey = y * (y1-y0) + y0
+        self.posez = z * (z1-z0) + z0
+
+        self.send_cartesian_trajectory()
+
+
+
 
 if __name__ == "__main__":
+    
     client = TrajectoryClient()
 
-    # The controller choice is obviously not required to move the robot. It is a part of this demo
-    # script in order to show all available trajectory controllers.
-    client.send_cartesian_trajectory()

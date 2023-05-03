@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # -- BEGIN LICENSE BLOCK ----------------------------------------------
 # Copyright 2021 FZI Forschungszentrum Informatik
@@ -41,6 +41,7 @@ from cartesian_control_msgs.msg import (
     CartesianTrajectoryPoint,
 )
 
+
 # Compatibility for python2 and python3
 if sys.version_info[0] < 3:
     input = raw_input
@@ -82,6 +83,18 @@ class TrajectoryClient:
     """Small trajectory client to test a joint trajectory"""
 
     def __init__(self):
+        
+        ### Constantes
+        self.posex = -0.09777509855285978
+        self.posey = -0.4948140800486405
+        self.posez = 0.29986715324743396
+
+        self.x= 0.2390843767827871
+        self.y= 0.9709245138688074
+        self.z= -0.003176030270307731
+        self.w= 0.011582831205217907
+
+
         rospy.init_node("test_move")
 
         timeout = rospy.Duration(5)
@@ -98,47 +111,6 @@ class TrajectoryClient:
 
         self.joint_trajectory_controller = JOINT_TRAJECTORY_CONTROLLERS[0]
         self.cartesian_trajectory_controller = CARTESIAN_TRAJECTORY_CONTROLLERS[0]
-
-    def send_joint_trajectory(self):
-        """Creates a trajectory and sends it using the selected action server"""
-
-        # make sure the correct controller is loaded and activated
-        self.switch_controller(self.joint_trajectory_controller)
-        trajectory_client = actionlib.SimpleActionClient(
-            "{}/follow_joint_trajectory".format(self.joint_trajectory_controller),
-            FollowJointTrajectoryAction,
-        )
-
-        # Wait for action server to be ready
-        timeout = rospy.Duration(5)
-        if not trajectory_client.wait_for_server(timeout):
-            rospy.logerr("Could not reach controller action server.")
-            sys.exit(-1)
-
-        # Create and fill trajectory goal
-        goal = FollowJointTrajectoryGoal()
-        goal.trajectory.joint_names = JOINT_NAMES
-
-        # The following list are arbitrary positions
-        # Change to your own needs if desired
-        position_list = [[0, -1.57, -1.57, 0, 0, 0]]
-        position_list.append([0.2, -1.57, -1.57, 0, 0, 0])
-        position_list.append([-0.5, -1.57, -1.2, 0, 0, 0])
-        duration_list = [3.0, 7.0, 10.0]
-        for i, position in enumerate(position_list):
-            point = JointTrajectoryPoint()
-            point.positions = position
-            point.time_from_start = rospy.Duration(duration_list[i])
-            goal.trajectory.points.append(point)
-
-        self.ask_confirmation(position_list)
-        rospy.loginfo("Executing trajectory using the {}".format(self.joint_trajectory_controller))
-
-        trajectory_client.send_goal(goal)
-        trajectory_client.wait_for_result()
-
-        result = trajectory_client.get_result()
-        rospy.loginfo("Trajectory execution finished in state {}".format(result.error_code))
 
     def send_cartesian_trajectory(self):
         """Creates a Cartesian trajectory and sends it using the selected action server"""
@@ -161,20 +133,18 @@ class TrajectoryClient:
         # Change to your own needs if desired
         pose_list = [
             geometry_msgs.Pose(
-                geometry_msgs.Vector3(-0.0229, -0.3613, 0.4479), geometry_msgs.Quaternion(0.0161, 0.9998, 3.8384, 9.4311)
-            ),
-            geometry_msgs.Pose(
-                geometry_msgs.Vector3(-0.1373, -0.3613, 0.4479), geometry_msgs.Quaternion(0.0161, 0.9998, 3.8384, 9.4311)
+                geometry_msgs.Vector3(self.posex,self.posey,self.posez), 
+                geometry_msgs.Quaternion(self.x,self.y,self.z,self.w)
             )
         ]
-        duration_list = [10.0, 20.0]
+        duration_list = [10]
         for i, pose in enumerate(pose_list):
             point = CartesianTrajectoryPoint()
             point.pose = pose
             point.time_from_start = rospy.Duration(duration_list[i])
             goal.trajectory.points.append(point)
 
-        self.ask_confirmation(pose_list)
+        #self.ask_confirmation(pose_list)
         rospy.loginfo(
             "Executing trajectory using the {}".format(self.cartesian_trajectory_controller)
         )
@@ -280,14 +250,4 @@ if __name__ == "__main__":
 
     # The controller choice is obviously not required to move the robot. It is a part of this demo
     # script in order to show all available trajectory controllers.
-    trajectory_type = client.choose_controller()
-    if trajectory_type == "joint_based":
-        client.send_joint_trajectory()
-    elif trajectory_type == "cartesian":
-        client.send_cartesian_trajectory()
-    else:
-        raise ValueError(
-            "I only understand types 'joint_based' and 'cartesian', but got '{}'".format(          
-                trajectory_type
-            )
-        )
+    client.send_cartesian_trajectory()

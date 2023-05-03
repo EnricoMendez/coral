@@ -82,7 +82,31 @@ class TrajectoryClient:
     """Small trajectory client to test a joint trajectory"""
 
     def __init__(self):
+        
+        ### Constantes
+
+        x0 = -.36
+        x1 = 0.33
+        y0 = -.23
+        y1 = -.62
+        z0 = .19
+        z1 = .41
+
+        x = .7
+        y = .5
+        z = .5
+
+        self.posex = x * (x1-x0) + x0
+        self.posey = y * (y1-y0) + y0
+        self.posez = z * (z1-z0) + z0
+
+        self.ori_x= 0.00044673384424923
+        self.ori_y= -0.9999965860768489
+        self.ori_z= 0.00069183591723153
+        self.ori_w= 0.00247984406432194
+        
         rospy.init_node("test_move")
+
 
         timeout = rospy.Duration(5)
         self.switch_srv = rospy.ServiceProxy(
@@ -120,20 +144,18 @@ class TrajectoryClient:
         # Change to your own needs if desired
         pose_list = [
             geometry_msgs.Pose(
-                geometry_msgs.Vector3(-0.0229, -0.3613, 0.4479), geometry_msgs.Quaternion(0.0161, 0.9998, 3.8384, 9.4311)
-            ),
-            geometry_msgs.Pose(
-                geometry_msgs.Vector3(-0.1373, -0.3613, 0.4479), geometry_msgs.Quaternion(0.0161, 0.9998, 3.8384, 9.4311)
+                geometry_msgs.Vector3(self.posex,self.posey,self.posez), 
+                geometry_msgs.Quaternion(self.ori_x,self.ori_y,self.ori_z,self.ori_w)
             )
         ]
-        duration_list = [10.0, 20.0]
+        duration_list = [1]
         for i, pose in enumerate(pose_list):
             point = CartesianTrajectoryPoint()
             point.pose = pose
             point.time_from_start = rospy.Duration(duration_list[i])
             goal.trajectory.points.append(point)
 
-        self.ask_confirmation(pose_list)
+        #self.ask_confirmation(pose_list)
         rospy.loginfo(
             "Executing trajectory using the {}".format(self.cartesian_trajectory_controller)
         )
@@ -151,61 +173,6 @@ class TrajectoryClient:
     # to use / copy all the functions below.                                                       #
     #                                                                                             #
     ###############################################################################################
-
-    def ask_confirmation(self, waypoint_list):
-        """Ask the user for confirmation. This function is obviously not necessary, but makes sense
-        in a testing script when you know nothing about the user's setup."""
-        rospy.logwarn("The robot will move to the following waypoints: \n{}".format(waypoint_list))
-        confirmed = False
-        valid = False
-        while not valid:
-            input_str = input(
-                "Please confirm that the robot path is clear of obstacles.\n"
-                "Keep the EM-Stop available at all times. You are executing\n"
-                "the motion at your own risk. Please type 'y' to proceed or 'n' to abort: "
-            )
-            valid = input_str in ["y", "n"]
-            if not valid:
-                rospy.loginfo("Please confirm by entering 'y' or abort by entering 'n'")
-            else:
-                confirmed = input_str == "y"
-        if not confirmed:
-            rospy.loginfo("Exiting as requested by user.")
-            sys.exit(0)
-
-    def choose_controller(self):
-        """Ask the user to select the desired controller from the available list."""
-        rospy.loginfo("Available trajectory controllers:")
-        for (index, name) in enumerate(JOINT_TRAJECTORY_CONTROLLERS):
-            rospy.loginfo("{} (joint-based): {}".format(index, name))
-        for (index, name) in enumerate(CARTESIAN_TRAJECTORY_CONTROLLERS):
-            rospy.loginfo("{} (Cartesian): {}".format(index + len(JOINT_TRAJECTORY_CONTROLLERS), name))
-        choice = -1
-        while choice < 0:
-            input_str = input(
-                "Please choose a controller by entering its number (Enter '0' if "
-                "you are unsure / don't care): "
-            )
-            try:
-                choice = int(input_str)
-                if choice < 0 or choice >= len(JOINT_TRAJECTORY_CONTROLLERS) + len(
-                    CARTESIAN_TRAJECTORY_CONTROLLERS
-                ):
-                    rospy.loginfo(
-                        "{} not inside the list of options. "
-                        "Please enter a valid index from the list above.".format(choice)
-                    )
-                    choice = -1
-            except ValueError:
-                rospy.loginfo("Input is not a valid number. Please try again.")
-        if choice < len(JOINT_TRAJECTORY_CONTROLLERS):
-            self.joint_trajectory_controller = JOINT_TRAJECTORY_CONTROLLERS[choice]
-            return "joint_based"
-
-        self.cartesian_trajectory_controller = CARTESIAN_TRAJECTORY_CONTROLLERS[
-            choice - len(JOINT_TRAJECTORY_CONTROLLERS)
-        ]
-        return "cartesian"
 
     def switch_controller(self, target_controller):
         """Activates the desired controller and stops all others from the predefined list above"""

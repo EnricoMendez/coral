@@ -80,7 +80,7 @@ CONFLICTING_CONTROLLERS = ["joint_group_vel_controller", "twist_controller"]
 
 class TrajectoryClient:
     """Small trajectory client to test a joint trajectory"""
-
+    
     def __init__(self):
         rospy.init_node("test_move")
 

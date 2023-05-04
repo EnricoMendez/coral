@@ -5,7 +5,7 @@ import os
 
 confidence_threshold = 0.80
 piece = 0
-model = tensorflow.keras.models.load_model("model_class_object.h5", compile=False)
+model = tensorflow.keras.models.load_model("model_class_object_nuevas.h5", compile=False)
 camera = cv2.VideoCapture(0)
 
 def image_process():

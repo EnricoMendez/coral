@@ -124,6 +124,7 @@ class tracker_node():
             #Convertion of values 
             if self.hand_depth is not None:
                 self.hand_position = self.max_coord[0] / self.image_width, self.max_coord[1] / self.image_height, self.hand_depth /80
+                
         if self.hand_position is not None:
             self.hand_position_pub.publish(str(self.hand_position))
 

@@ -1,28 +1,22 @@
 from pymodbus.client.sync import ModbusTcpClient
 
-# Definir la dirección IP y el número de puerto del robot UR5
-IP_ADDRESS = '192.168.1.10'
+# Define IP address and port number in UR5 and creat client
+IP_ADDRESS = '192.168.0.102'
 PORT = 502
-
-# Crear un cliente Modbus TCP
 client = ModbusTcpClient(IP_ADDRESS, PORT)
+client.connect() # Connect with UR5
 
-# Conectar con el robot UR5
-client.connect()
+# Define digital inputs
+input_values = False
+address = 24
 
-# Definir los valores de entrada digital
-input_values = [True, False, True, False, True, False]
+# write values to input
 
-# Escribir los valores en las entradas digitales del robot UR5
-for i in range(len(input_values)):
-    # Escribir en la entrada digital correspondiente
-    result = client.write_coil(i, input_values[i])
-    
-    # Verificar si se escribió correctamente
-    if result.isError():
-        print("Error al escribir en la entrada digital ", i)
-    else:
-        print("Entrada digital ", i, " actualizada con éxito")
-
-# Desconectar del robot UR5
+result = client.write_coil(address, input_values)  # send values
+    # Verify send
+if result.isError():
+    print("Error al escribir en la entrada digital ", address)
+else:
+    print("Entrada digital ", address, " actualizada con éxito")
+# Desconnect from robot
 client.close()

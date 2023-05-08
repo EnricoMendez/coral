@@ -2,13 +2,12 @@
 import tensorflow
 import cv2
 import numpy as np
-import os
+#import os
 import rospy
 from std_msgs.msg import Int32
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import rospkg
-
 
 class object_cls_node():
     def __init__(self):
@@ -78,8 +77,7 @@ class object_cls_node():
         image = self.cv_image
         image = cv2.resize(image, (224, 224), interpolation=cv2.INTER_AREA)
         # Change brightness and contrast of image
-        image = cv2.addWeighted(image, 3., image, 0., 1.)      
-        cv2.imshow("Object classification", image)  
+        image = cv2.addWeighted(image, 3., image, 0., 1.) 
         # Make the image a numpy array and reshape it to the models input shape.
         image = np.asarray(image, dtype=np.float32).reshape(1, 224, 224, 3)
         # Normalize the image array
@@ -88,10 +86,9 @@ class object_cls_node():
 
     def publish(self):
         self.object_num_pub.publish(self.part_num)
-
-        os.system('clear') 
-        print('Part number: ',self.part_num)
-        print('Confidence: ', self.confidence_score)
+        # os.system('clear') 
+        # print('Part number: ',self.part_num)
+        # print('Confidence: ', self.confidence_score)
 
     def camera_callback(self,data):
         try:

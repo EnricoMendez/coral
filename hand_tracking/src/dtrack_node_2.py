@@ -18,7 +18,7 @@ class tracker_node():
         
         ### Publishers
         self.hand_position_pub = rospy.Publisher("hand_position", String, queue_size=1)
-        self.image_position_pub = rospy.Publisher("image_position", Image, queue_size=1)
+        #self.image_position_pub = rospy.Publisher("image_position", Image, queue_size=1)
         
         ### Constants
         self.mp_drawing = mp.solutions.drawing_utils
@@ -96,21 +96,17 @@ class tracker_node():
             if self.max_coord[1] > self.image_height:
                 self.max_coord = self.max_coord[0], self.image_height
 
-
         # Publish image    
-        if self.max_coord[0] is not None:
-            self.image = cv2.circle(self.cv_image, (self.max_coord[0],self.max_coord[1]), 10, (0,0,255), 3)
-        else: 
-            self.image = self.cv_image
-        self.image_message = self.bridge_object.cv2_to_imgmsg(self.image, encoding="passthrough")
+        #if self.max_coord[0] is not None:
+        #    self.image = cv2.circle(self.cv_image, (self.max_coord[0],self.max_coord[1]), 10, (0,0,255), 3)
+        #else: 
+        #    self.image = self.cv_image
+        #self.image_message = self.bridge_object.cv2_to_imgmsg(self.image, encoding="passthrough")
 
     def publish(self):
-       
-        # Image publisher
-        self.image_position_pub.publish(self.image_message)
 
-        #os.system('clear') 
-        #print('Max coord: ',self.max_coord)
+        # Image publisher
+        #self.image_position_pub.publish(self.image_message)
         
         # Depth hand calculation
         if self.max_coord[0] is not None:
@@ -119,15 +115,14 @@ class tracker_node():
             if (0 < y < 480) and (0 < x < 848):
                 if 150 >  (self.dep[y, x] / 10) > 0:
                     self.hand_depth = self.dep[y, x] / 10
-            #print('The hand is at {} cm'.format(self.hand_depth))
 
             #Convertion of values 
             if self.hand_depth is not None:
                 self.hand_position = self.max_coord[0] / self.image_width, self.max_coord[1] / self.image_height, self.hand_depth /80
                 for value in self.hand_position:
+                    value = round(value,3)
                     if value > 1.0: value = 1.0
                     if value < 0.0: value = 0.0
-                    
                         
         if self.hand_position is not None:
             self.hand_position_pub.publish(str(self.hand_position))

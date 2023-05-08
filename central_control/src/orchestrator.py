@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import roslaunch
 import rospy
 import rospkg
@@ -20,9 +19,7 @@ def launch_file(pkg,file):
 rospy.init_node('orchestrator', anonymous=False)
 
 launch1 = launch_file('hand_tracking','local_test.launch')
-
 launch1.start()
 
 rospy.spin()
-
 launch1.shutdown()

@@ -7,12 +7,12 @@ client = ModbusTcpClient(IP_ADDRESS, PORT)
 client.connect() # Connect with UR5
 
 # Define digital inputs
-input_values = False
+input_value = False
 address = 24
 
 # write values to input
 
-result = client.write_coil(address, input_values)  # send values
+result = client.write_coil(address, input_value)  # send values
     # Verify send
 if result.isError():
     print("Error al escribir en la entrada digital ", address)

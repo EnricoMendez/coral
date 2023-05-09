@@ -51,9 +51,7 @@ class TrajectoryClient:
     
 
     def __init__(self):
-        
         ### Constantes
-        # self.launch = launch_file('cobot_control','urlink.launch')
         self.flag = True
         self.posex = 0
         self.posey = 0
@@ -160,14 +158,6 @@ class TrajectoryClient:
         self.switch_srv(srv)
 
     def callback_coordinates(self,msg):
-        # if self.flag:
-        #     print('info recieved')
-        #     self.launch.start()
-        #     print('Bring launched')
-        #     print('Loading')
-        #     time.sleep(10)
-        #     print('Continue')
-        #     self.flag = False
         x0 = -.36
         x1 = 0.33
         y0 = -.23

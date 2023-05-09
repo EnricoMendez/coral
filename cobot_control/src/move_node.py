@@ -4,6 +4,8 @@
 import sys
 
 import actionlib
+from func import *
+import time
 import geometry_msgs.msg as geometry_msgs
 import rospy
 from std_msgs.msg import Float32MultiArray
@@ -43,6 +45,7 @@ CARTESIAN_TRAJECTORY_CONTROLLERS = [
 # be conflicting with the joint trajectory controllers
 CONFLICTING_CONTROLLERS = ["joint_group_vel_controller", "twist_controller"]
 
+time.sleep(1)
 
 class TrajectoryClient:
     
@@ -50,7 +53,8 @@ class TrajectoryClient:
     def __init__(self):
         
         ### Constantes
-
+        # self.launch = launch_file('cobot_control','urlink.launch')
+        self.flag = True
         self.posex = 0
         self.posey = 0
         self.posez = 0
@@ -65,7 +69,7 @@ class TrajectoryClient:
 
         rospy.Subscriber("/coordinates_coral",Float32MultiArray,self.callback_coordinates)
 
-
+        # self.launch.start()
         timeout = rospy.Duration(5)
         self.switch_srv = rospy.ServiceProxy(
             "controller_manager/switch_controller", SwitchController
@@ -125,6 +129,9 @@ class TrajectoryClient:
         result = trajectory_client.get_result()
 
         rospy.loginfo("Trajectory execution finished in state {}".format(result.error_code))
+        # self.launch.shutdown()
+        rospy.signal_shutdown('Done')
+
 
     def switch_controller(self, target_controller):
         """Activates the desired controller and stops all others from the predefined list above"""
@@ -153,7 +160,14 @@ class TrajectoryClient:
         self.switch_srv(srv)
 
     def callback_coordinates(self,msg):
-        print('info recieved')
+        # if self.flag:
+        #     print('info recieved')
+        #     self.launch.start()
+        #     print('Bring launched')
+        #     print('Loading')
+        #     time.sleep(10)
+        #     print('Continue')
+        #     self.flag = False
         x0 = -.36
         x1 = 0.33
         y0 = -.23

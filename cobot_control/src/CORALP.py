@@ -40,6 +40,7 @@ from cartesian_control_msgs.msg import (
     FollowCartesianTrajectoryGoal,
     CartesianTrajectoryPoint,
 )
+from func import *
 
 # Compatibility for python2 and python3
 if sys.version_info[0] < 3:
@@ -84,6 +85,8 @@ class TrajectoryClient:
     def __init__(self):
         
         ### Constantes
+
+        
 
         x0 = -.36
         x1 = 0.33

@@ -46,28 +46,40 @@ CARTESIAN_TRAJECTORY_CONTROLLERS = [
 # be conflicting with the joint trajectory controllers
 CONFLICTING_CONTROLLERS = ["joint_group_vel_controller", "twist_controller"]
 
+
+
 class TrajectoryClient:
     
+
     def __init__(self):
         ### Constantes
-        rospy.on_shutdown(self.cleanup)
+        rospy.on_shutdown(self.cleanup) 
+
+        self.pkg = 'cobot_control'
+        self.file = 'urcom.launch'
+        self.communication = launch_file(self.pkg,self.file)
+
+        print('Trying to launch communication')
+        self.communication.start()
+        time.sleep(3)
+
+
         self.flag = True
         self.posex = 0
         self.posey = 0
         self.posez = 0
 
-        self.ori_x= 0.0004947227089390941
-        self.ori_y= -0.9999966483194065
-        self.ori_z= 0.0007266061044373305
-        self.ori_w= 0.0024352911455313847
-
-        rospy.init_node("move_node")
+        self.ori_x= 0.00044673384424923
+        self.ori_y= -0.9999965860768489
+        self.ori_z= 0.00069183591723153
+        self.ori_w= 0.00247984406432194
+        
+        rospy.init_node("test_move")
         print('Node init')
 
         rospy.Subscriber("/coordinates_coral",Float32MultiArray,self.callback_coordinates)
         self.flag_pub=rospy.Publisher("flag_coordinates",String,queue_size=10)
-        self.finish_pub=rospy.Publisher("move_finish",String,queue_size=10)
-
+        # self.launch.start()
         timeout = rospy.Duration(5)
         self.switch_srv = rospy.ServiceProxy(
             "controller_manager/switch_controller", SwitchController
@@ -82,11 +94,14 @@ class TrajectoryClient:
 
         self.cartesian_trajectory_controller = CARTESIAN_TRAJECTORY_CONTROLLERS[0]
         r = rospy.Rate(1)
+        time.sleep(10)
         while not rospy.is_shutdown():
+            
             self.flag_pub.publish('now')
             r.sleep()
 
     def send_cartesian_trajectory(self):
+        print('Inside the command')
         """Creates a Cartesian trajectory and sends it using the selected action server"""
         self.switch_controller(self.cartesian_trajectory_controller)
 
@@ -128,8 +143,8 @@ class TrajectoryClient:
         result = trajectory_client.get_result()
 
         rospy.loginfo("Trajectory execution finished in state {}".format(result.error_code))
-       
         rospy.signal_shutdown('Done')
+        
 
 
     def switch_controller(self, target_controller):
@@ -158,19 +173,17 @@ class TrajectoryClient:
         srv.strictness = SwitchControllerRequest.BEST_EFFORT
         self.switch_srv(srv)
 
-    def cleanup (self):
-        print('Im move is done')
-        self.finish_pub.publish('now')
-        print('I sent the finish flag')
+
+        
 
     def callback_coordinates(self,msg):
-        x0 = -0.3225
-        y0 = -0.3430
-        z0 = 0.15668
-
-        x1 = 0.2330
-        y1 = -0.621
-        z1 = 0.3845
+        print('Data recivied')
+        x0 = -.36
+        x1 = 0.33
+        y0 = -.23
+        y1 = -.62
+        z0 = .19
+        z1 = .41
 
         x = msg.data[0]
         y = msg.data[1]
@@ -182,6 +195,10 @@ class TrajectoryClient:
 
         self.send_cartesian_trajectory()
 
+    def cleanup(self):
+        print('Node in cleanup')
+        self.communication.shutdown()
+        print('Node killed successfully')
 
 
 

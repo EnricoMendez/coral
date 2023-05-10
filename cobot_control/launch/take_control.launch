@@ -1,0 +1,5 @@
+<launch>
+
+  <node pkg="cobot_control" type="move_node.py" name="move_node" respawn="true" output="screen"/>
+
+</launch>

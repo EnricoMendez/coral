@@ -8,6 +8,7 @@ from std_msgs.msg import Int32
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import rospkg
+import time
 
 class object_cls_node():
     def __init__(self):
@@ -26,7 +27,7 @@ class object_cls_node():
         rospack.list() 
         # get the file path for this ros pkg
         pkg_path = str(rospack.get_path('object_classification'))
-        model_path = pkg_path + '/src/model_class_object_nuevas.h5'
+        model_path = pkg_path + '/scripts/model_class_object_nuevas.h5'
         self.model = tensorflow.keras.models.load_model(model_path, compile=False)
         ### Variables
         self.part_num = 0
@@ -49,6 +50,7 @@ class object_cls_node():
 
     def object_class(self,image):
         # Predict class
+        time.sleep(0.5)
         prediction = self.model.predict(image, verbose=0)
         # Obtain value with higher confidence score
         index = np.argmax(prediction)
@@ -70,7 +72,8 @@ class object_cls_node():
             if index == 6:
                 self.part_num = 7
         else:
-            self.part_num = 0
+            self.part_num = 8
+        
 
     def image_processing(self):
         # Resize the raw image into (224-height,224-width) pixels

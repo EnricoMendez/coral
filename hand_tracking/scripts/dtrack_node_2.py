@@ -132,7 +132,6 @@ class tracker_node():
                         
         if self.hand_position is not None:
             self.hand_position_pub.publish(str(self.hand_position))
-            print(self.hand_position)
 
     def camera_callback(self,data):
         try:

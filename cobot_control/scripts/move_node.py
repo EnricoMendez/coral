@@ -130,6 +130,8 @@ class TrajectoryClient:
         rospy.loginfo("Trajectory execution finished in state {}".format(result.error_code))
        
         rospy.signal_shutdown('Done')
+        while True:
+            pass
 
 
     def switch_controller(self, target_controller):

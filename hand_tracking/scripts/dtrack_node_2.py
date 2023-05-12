@@ -6,6 +6,7 @@ from cvzone.HandTrackingModule import HandDetector
 import rospy 
 import os
 from std_msgs.msg import String
+from std_msgs.msg import Float32MultiArray
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
  
@@ -18,6 +19,8 @@ class tracker_node():
         
         ### Publishers
         self.hand_position_pub = rospy.Publisher("hand_position", String, queue_size=1)
+        self.hand_position_pub2 = rospy.Publisher("/hand_track/hand_position", Float32MultiArray, queue_size=1)
+        self.status = rospy.Publisher("/hand_track/status", String, queue_size=1)
         #self.image_position_pub = rospy.Publisher("image_position", Image, queue_size=1)
         
         ### Constants
@@ -41,16 +44,15 @@ class tracker_node():
         self.hand1 = None
         self.hand2 = None
         self.hand_position = None
+        self.position_msg = Float32MultiArray()
         
         ###********** INIT NODE **********###  
         r = rospy.Rate(10)
-        print('initialized node')
+        self.status.publish('initialized node')
 
         while not rospy.is_shutdown():
             if self.image_received * self.dep_received == 0:
-                print(self.dep_received)
-                print(self.image_received)
-                print('Image not received')
+                self.status.publish('Image not received')
                 continue
             self.cv_image = cv2.flip(self.cv_image,1)
             self.hands, nimage = self.detector.findHands(self.cv_image, flipType=1, )  # with draw
@@ -129,16 +131,17 @@ class tracker_node():
                 if self.hand_position[1] < 0.0: self.hand_position = self.hand_position[0], 0.0, self.hand_position[2]
                 if self.hand_position[2] < 0.0: self.hand_position = self.hand_position[0], self.hand_position[1], 0.0
 
-                        
+        self.position_msg.data = self.hand_position
         if self.hand_position is not None:
             self.hand_position_pub.publish(str(self.hand_position))
+            self.hand_position_pub2.publish(self.position_msg)
 
     def camera_callback(self,data):
         try:
             self.cv_image = self.bridge_object.imgmsg_to_cv2(data, desired_encoding="bgr8")
         
         except CvBridgeError as e:
-            print(e) 
+            self.status.publish(e) 
         if self.image_received == 0:
             self.image_height, self.image_width, c = self.cv_image.shape 
             self.image_received = 1
@@ -151,7 +154,7 @@ class tracker_node():
 
     def cleanup(self):
                
-        print('Node killed successfully')
+        self.status.publish('Node killed successfully')
 
 if __name__ == "__main__":  
     rospy.init_node('tracker_node', anonymous=True)

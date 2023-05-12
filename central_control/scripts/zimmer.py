@@ -32,15 +32,19 @@ class zimmer():
         ### Main loop ###
         print('Node initialized')
         self.bring.start()
+        time.sleep(3)
+        os.system('clear')
+        print('Wait for communication')
         
         
-        r = rospy.Rate(10)
+        r = rospy.Rate(1)
         while not rospy.is_shutdown():
             # print('Not finish')
             if self.finish_flag:
                 self.finish_flag = False
                 print('Im done')
                 print('waiting time')
+                # input()
                 self.piano_ur()
             r.sleep()
 
@@ -53,17 +57,17 @@ class zimmer():
     def finish_callback(self,data):
         # os.system('clear')
         self.move.shutdown()
+        time.sleep(3)
         self.bring.shutdown()
         print('Move has finished Ill wait')
         self.bring = self.launch_file(self.pkg_bring,self.file_bring)
         self.bring.start()
-        time.sleep(5)
-
+        time.sleep(1)
         self.finish_flag = True
 
 
 
-    def piano_ur(self):
+    def piano_ur(self):                 
         os.system('clear')
         self.move = self.launch_file(self.pkg_move,self.file_move)
         self.move.start()

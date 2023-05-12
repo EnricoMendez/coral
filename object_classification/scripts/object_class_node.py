@@ -5,6 +5,7 @@ import numpy as np
 #import os
 import rospy
 from std_msgs.msg import Int32
+from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import rospkg
@@ -19,6 +20,11 @@ class object_cls_node():
         ### Publishers
         self.object_num_pub = rospy.Publisher("object_num", Int32, queue_size=1)
         
+        
+        self.status = rospy.Publisher("/object_class/status", String, queue_size=1)
+        
+        
+        
         ### Constants
         self.confidence_threshold = 0.75
         # get an instance of RosPack with the default search paths
@@ -27,7 +33,7 @@ class object_cls_node():
         rospack.list() 
         # get the file path for this ros pkg
         pkg_path = str(rospack.get_path('object_classification'))
-        model_path = pkg_path + '/scripts/model_class_object_nuevas.h5'
+        model_path = pkg_path + '/scripts/imageclassifier0.h5'
         self.model = tensorflow.keras.models.load_model(model_path, compile=False)
         ### Variables
         self.part_num = 0
@@ -38,11 +44,13 @@ class object_cls_node():
 
         ###********** INIT NODE **********###  
         r = rospy.Rate(10)
-        print('initialized node')
+        self.status.publish('initialized node')
+        #print('initialized node')
 
         while not rospy.is_shutdown():
             if self.image_received == 0:
-                print('Image not received')
+                self.status.publish('Image not received')
+                #print('Image not received')
                 continue
             self.image_processing()
             self.publish()
@@ -78,11 +86,11 @@ class object_cls_node():
     def image_processing(self):
         # Resize the raw image into (224-height,224-width) pixels
         image = self.cv_image
-        image = cv2.resize(image, (256, 256), interpolation=cv2.INTER_AREA)
+        image = cv2.resize(image, (224, 224), interpolation=cv2.INTER_AREA)
         # Change brightness and contrast of image
         image = cv2.addWeighted(image, 3., image, 0., 1.) 
         # Make the image a numpy array and reshape it to the models input shape.
-        image = np.asarray(image, dtype=np.float32).reshape(1, 256, 256, 3)
+        image = np.asarray(image, dtype=np.float32).reshape(1, 224, 224, 3)
         # Normalize the image array
         image = (image / 127.5) - 1
         self.object_class(image)
@@ -97,12 +105,14 @@ class object_cls_node():
         try:
             self.cv_image = self.bridge_object.imgmsg_to_cv2(data, desired_encoding="bgr8")
         except CvBridgeError as e:
-            print(e) 
+            self.status.publish(e) 
+            #print(e) 
         if self.image_received == 0: 
             self.image_received = 1
 
     def cleanup(self):    
-        print('Node killed successfully')
+        self.status.publish('Node killed successfully')
+        #print('Node killed successfully')
 
 if __name__ == "__main__":  
     rospy.init_node('object_class_node', anonymous=True)

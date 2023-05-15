@@ -88,14 +88,14 @@ class TrajectoryClient:
 
         
 
-        x0 = -.36
         x1 = 0.33
-        y0 = -.23
-        y1 = -.62
-        z0 = .19
+        x0 = -.36
         z1 = .41
+        y0 = -.23
+        z0 = .19
+        y1 = -.62
 
-        x = .7
+        x = .5
         y = .5
         z = .5
 
@@ -151,7 +151,7 @@ class TrajectoryClient:
                 geometry_msgs.Quaternion(self.ori_x,self.ori_y,self.ori_z,self.ori_w)
             )
         ]
-        duration_list = [1]
+        duration_list = [4]
         for i, pose in enumerate(pose_list):
             point = CartesianTrajectoryPoint()
             point.pose = pose
@@ -163,6 +163,7 @@ class TrajectoryClient:
             "Executing trajectory using the {}".format(self.cartesian_trajectory_controller)
         )
         trajectory_client.send_goal(goal)
+        print('moving')
         trajectory_client.wait_for_result()
 
         result = trajectory_client.get_result()

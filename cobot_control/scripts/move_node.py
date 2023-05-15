@@ -67,6 +67,8 @@ class TrajectoryClient:
         rospy.Subscriber("/coordinates_coral",Float32MultiArray,self.callback_coordinates)
         self.flag_pub=rospy.Publisher("flag_coordinates",String,queue_size=10)
         self.finish_pub=rospy.Publisher("move_finish",String,queue_size=10)
+        self.status_pub=rospy.Publisher("/move/status",String,queue_size=10)
+
 
         timeout = rospy.Duration(5)
         self.switch_srv = rospy.ServiceProxy(
@@ -82,11 +84,13 @@ class TrajectoryClient:
 
         self.cartesian_trajectory_controller = CARTESIAN_TRAJECTORY_CONTROLLERS[0]
         r = rospy.Rate(1)
+        self.status_pub.publish('Node init')
         while not rospy.is_shutdown():
             self.flag_pub.publish('now')
             r.sleep()
 
     def send_cartesian_trajectory(self):
+        self.status_pub.publish('start movement')
         """Creates a Cartesian trajectory and sends it using the selected action server"""
         self.switch_controller(self.cartesian_trajectory_controller)
 
@@ -161,18 +165,18 @@ class TrajectoryClient:
         self.switch_srv(srv)
 
     def cleanup (self):
-        print('Im move is done')
+        self.status_pub.publish('Im move is done')
         self.finish_pub.publish('now')
-        print('I sent the finish flag')
+        self.status_pub.publish('I sent the finish flag')
 
     def callback_coordinates(self,msg):
-        x0 = -0.3225
-        y0 = -0.3430
-        z0 = 0.15668
+        x0 = -0.1736
+        y0 = -0.4883
+        z0 = 0.13017
 
-        x1 = 0.2330
-        y1 = -0.621
-        z1 = 0.3845
+        x1 = 0.13243
+        y1 = -0.6430
+        z1 = 0.31173
 
         x = msg.data[0]
         y = msg.data[1]

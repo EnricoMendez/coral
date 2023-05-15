@@ -49,9 +49,15 @@ class zimmer():
         ### Main loop ###
         self.status_pub.publish('Node initialized')
         self.Ur_bring.start()
-        time.sleep(3)
-        os.system('clear')
-        
+        self.status_pub.publish('Comunication initialized')
+        self.status_pub.publish('Enter to continue')
+        input('CLick to continue')
+        self.Ur_bring.shutdown()
+        self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
+        time.sleep(2)
+        self.status_pub.publish('Comunication killed')
+        self.Ur_bring.start()
+        self.status_pub.publish('Comunication initialized')
         
         r = rospy.Rate(1)
         self.status_pub.publish('node init')
@@ -61,6 +67,7 @@ class zimmer():
                 self.status_pub.publish('Take flag')
                 self.drums_take()
             if self.bring_flag:
+                self.status_pub.publish('Bring flag')
                 self.guitar_bring()
             r.sleep()
 
@@ -73,11 +80,13 @@ class zimmer():
         self.move.shutdown()
         time.sleep(3)
         self.Ur_bring.shutdown()
+        self.status_pub.publish('Comunication killed')
         self.status_pub.publish('Move has finished Ill wait')
+        self.finish_flag = True
         self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
         self.Ur_bring.start()
-        time.sleep(1)
-        self.finish_flag = True
+        self.status_pub.publish('Comunication initialized')
+        # time.sleep(1)
 
     def guitar_bring(self):
         object = self.check_vr_num()
@@ -86,10 +95,13 @@ class zimmer():
                 return
             object = self.check_vr_num()
         self.message_pub.publish(object)
-        time.sleep(10)
+        self.status_pub.publish('Waiting to go home')
+        time.sleep(15)
+        self.status_pub.publish('I will start external control')
         self.piano_ur()
         while not self.finish_flag:
             pass
+        self.status_pub.publish('Waiting for go')
         while not self.command == 'go':
             pass
         self.message_pub.publish(22)
@@ -173,8 +185,10 @@ class zimmer():
         self.status_pub.publish('I will compare')
                                                                                                                                                                                                                                                                                                                                                                                                                                     
         if self.command == 'take':
+            self.message_pub.publish(21)
             self.take_flag = True
         if self.command == 'bring':
+            self.message_pub.publish(20)
             self.bring_flag = True
 
     def hand_track_callback(self,data):

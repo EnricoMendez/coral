@@ -178,14 +178,16 @@ class TrajectoryClient:
         y1 = -0.6430
         z1 = 0.31173
 
-        x = msg.data[0]
-        y = msg.data[1]
-        z = msg.data[2]
+        x = round(msg.data[0],4)
+        y = round(msg.data[1],4)
+        z = round(msg.data[2],4)
 
-        self.posex = x * (x1-x0) + x0
-        self.posey = y * (y1-y0) + y0
-        self.posez = z * (z1-z0) + z0
+        self.posex = round(x * (x1-x0) + x0,4)
+        self.posey = round(y * (y1-y0) + y0,4)
+        self.posez = round(z * (z1-z0) + z0,4)
 
+        msg = str('Coordinates: ('+str(self.posex)+','+str(self.posey)+','+str(self.posez)+')')
+        self.status_pub.publish(msg)
         self.send_cartesian_trajectory()
 
 

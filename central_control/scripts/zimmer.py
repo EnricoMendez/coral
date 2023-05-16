@@ -78,14 +78,14 @@ class zimmer():
     def finish_callback(self,data):
         # os.system('clear')
         self.move.shutdown()
-        time.sleep(3)
+        # time.sleep(3)
         self.Ur_bring.shutdown()
         self.status_pub.publish('Comunication killed')
         self.status_pub.publish('Move has finished Ill wait')
         self.finish_flag = True
-        self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
-        self.Ur_bring.start()
-        self.status_pub.publish('Comunication initialized')
+        # self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
+        # self.Ur_bring.start()
+        # self.status_pub.publish('Comunication initialized')
         # time.sleep(1)
 
     def guitar_bring(self):
@@ -96,7 +96,7 @@ class zimmer():
             object = self.check_vr_num()
         self.message_pub.publish(object)
         self.status_pub.publish('Waiting to go home')
-        time.sleep(15)
+        time.sleep(13)
         self.status_pub.publish('I will start external control')
         self.piano_ur()
         while not self.finish_flag:
@@ -105,7 +105,10 @@ class zimmer():
         while not self.command == 'go':
             pass
         self.message_pub.publish(22)
-        time.sleep(1)
+        # time.sleep(1)
+        self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
+        self.Ur_bring.start()
+        self.status_pub.publish('Comunication initialized')
         self.bring_flag = False
 
     def check_vr_num(self):
@@ -118,13 +121,18 @@ class zimmer():
 
     def drums_take(self):
         self.piano_ur()
+        self.status_pub.publish('I will start external control')
         while not self.finish_flag:
             pass
+        self.status_pub.publish('Waiting for go')
         while not self.command == 'go':
             if self.check_cancel():
                 return
             pass
         self.message_pub.publish(22)
+        self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
+        self.Ur_bring.start()
+        self.status_pub.publish('Comunication initialized')
         time.sleep(5)
         tiempo_inicial = time.time()
         tiempo_actual = time.time()

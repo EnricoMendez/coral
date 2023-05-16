@@ -1,0 +1,14 @@
+<launch>
+  <!-- Load URDF and SRDF -->
+  <arg name="urdf_file" default="$(find ur5e_moveit_config)/config/ur5e.urdf"/>
+  <arg name="srdf_file" default="$(find ur5e_moveit_config)/config/ur5e.srdf"/>
+
+  <param name="robot_description" command="$(find xacro)/xacro --inorder '$(arg urdf_file)'"/>
+
+  <param name="robot_description_semantic" textfile="$(arg srdf_file)"/>
+
+  <!-- MoveGroup -->
+  <node name="move_group" pkg="moveit_ros_move_group" type="move_group" output="screen">
+    <rosparam command="load" file="$(find ur5e_moveit_config)/config/move_group_params.yaml"/>
+  </node>
+</launch>

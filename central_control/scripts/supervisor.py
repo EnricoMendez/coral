@@ -3,15 +3,19 @@
 import rospy
 from std_msgs.msg import String
 import os
+from std_msgs.msg import Int32
 
 class supervisor():
     def __init__(self):
+        rospy.on_shutdown(cleanup)
         ### suscribers
         rospy.Subscriber("/zimmer/status",String,self.zimmer)
         rospy.Subscriber("/move/status",String,self.move)
         rospy.Subscriber("/hand_track/status",String,self.hands)
         rospy.Subscriber("/object_class/status",String,self.object)
         rospy.Subscriber("/voice_recognition/status",String,self.voice)
+        rospy.Subscriber("/arduino_commands",Int32,self.arduino)
+        
         
         ### variables
         self.zimmer_msg = ['','','']
@@ -19,6 +23,7 @@ class supervisor():
         self.hands_msg = ['','','']
         self.voice_msg = ['','','']
         self.object_msg = ['','','']
+        self.arduino_msg = ['','','']
 
         r = rospy.Rate(1)
         
@@ -46,6 +51,10 @@ class supervisor():
     def voice(self,data):
         self.voice_msg = self.message_sort(data.data,self.voice_msg)
 
+    def arduino(self,data):
+        self.arduino_msg = self.message_sort(str(data.data),self.arduino_msg)
+
+
     def print_msg(self):
         print('Zimmer node status:')
         for element in self.zimmer_msg:
@@ -58,12 +67,17 @@ class supervisor():
             print('\t'+element)
         print('Hands tracking node status:')
         for element in self.hands_msg:
+            print('\t'+element)        
+        print('Arduino commands:')
+        for element in self.arduino_msg:
             print('\t'+element)
         print('Robot control node status:')
         for element in self.move_msg:
             print('\t'+element)
         
-
+    def cleanup(self):
+        print('Node killed successfully')
+        
 if __name__ == "__main__":
     rospy.init_node('Supervisor',anonymous=False)
     supervisor()

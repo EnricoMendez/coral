@@ -134,6 +134,8 @@ class tracker_node():
         self.position_msg.data = self.hand_position
         if self.hand_position is not None:
             self.hand_position_pub.publish(str(self.hand_position))
+            msg = 'Hand position: '+ str(self.hand_position)
+            self.status.publish(msg)
             self.hand_position_pub2.publish(self.position_msg)
 
     def camera_callback(self,data):

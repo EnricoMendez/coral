@@ -97,6 +97,8 @@ class object_cls_node():
 
     def publish(self):
         self.object_num_pub.publish(self.part_num)
+        msg = 'Object identified: '+str(self.part_num)
+        self.status.publish(msg)
         # os.system('clear') 
         # print('Part number: ',self.part_num)
         # print('Confidence: ', self.confidence_score)

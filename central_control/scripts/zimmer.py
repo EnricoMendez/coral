@@ -59,7 +59,7 @@ class zimmer():
         self.Ur_bring.start()
         self.status_pub.publish('Comunication initialized')
         
-        r = rospy.Rate(1)
+        r = rospy.Rate(10)
         self.status_pub.publish('node init')
         while not rospy.is_shutdown():
             # print('Not finish')
@@ -190,7 +190,7 @@ class zimmer():
             return
         if self.take_flag or self.bring_flag :
             return
-        self.status_pub.publish('I will compare')
+        # self.status_pub.publish('I will compare')
                                                                                                                                                                                                                                                                                                                                                                                                                                     
         if self.command == 'take':
             self.message_pub.publish(21)

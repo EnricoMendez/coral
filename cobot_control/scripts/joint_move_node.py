@@ -2,7 +2,8 @@
 
 
 import sys
-
+from math import *
+from igm import *
 import actionlib
 from func import *
 import time
@@ -23,6 +24,15 @@ from controller_manager_msgs.srv import (ListControllers,
 from trajectory_msgs.msg import JointTrajectoryPoint
 
 
+# If your robot description is created with a tf_prefix, those would have to be adapted
+JOINT_NAMES = [
+    "shoulder_pan_joint",
+    "shoulder_lift_joint",
+    "elbow_joint",
+    "wrist_1_joint",
+    "wrist_2_joint",
+    "wrist_3_joint",
+]
 
 # All of those controllers can be used to execute joint-based trajectories.
 # The scaled versions should be preferred over the non-scaled versions.
@@ -46,40 +56,33 @@ CARTESIAN_TRAJECTORY_CONTROLLERS = [
 # be conflicting with the joint trajectory controllers
 CONFLICTING_CONTROLLERS = ["joint_group_vel_controller", "twist_controller"]
 
-
-
 class TrajectoryClient:
     
-
     def __init__(self):
         ### Constantes
-        rospy.on_shutdown(self.cleanup) 
-
-        self.pkg = 'cobot_control'
-        self.file = 'urcom.launch'
-        self.communication = launch_file(self.pkg,self.file)
-
-        print('Trying to launch communication')
-        self.communication.start()
-        time.sleep(3)
-
-
+        self.igm = igm()
+        rospy.on_shutdown(self.cleanup)
         self.flag = True
         self.posex = 0
         self.posey = 0
         self.posez = 0
 
-        self.ori_x= 0.00044673384424923
-        self.ori_y= -0.9999965860768489
-        self.ori_z= 0.00069183591723153
-        self.ori_w= 0.00247984406432194
-        
-        rospy.init_node("test_move")
+        self.ori_x= 0.0004947227089390941
+        self.ori_y= -0.9999966483194065
+        self.ori_z= 0.0007266061044373305
+        self.ori_w= 0.0024352911455313847
+        self.best = 0
+
+        rospy.init_node("move_node")
         print('Node init')
 
         rospy.Subscriber("/coordinates_coral",Float32MultiArray,self.callback_coordinates)
+        # rospy.Subscriber("/handtrack",Float32MultiArray,self.callback_coordinates)
         self.flag_pub=rospy.Publisher("flag_coordinates",String,queue_size=10)
-        # self.launch.start()
+        self.finish_pub=rospy.Publisher("move_finish",String,queue_size=10)
+        self.status_pub=rospy.Publisher("/move/status",String,queue_size=10)
+
+
         timeout = rospy.Duration(5)
         self.switch_srv = rospy.ServiceProxy(
             "controller_manager/switch_controller", SwitchController
@@ -92,24 +95,23 @@ class TrajectoryClient:
             rospy.logerr("Could not reach controller switch service. Msg: {}".format(err))
             sys.exit(-1)
 
-        self.cartesian_trajectory_controller = CARTESIAN_TRAJECTORY_CONTROLLERS[0]
-        r = rospy.Rate(1)
-        time.sleep(10)
+        self.joint_trajectory_controller = JOINT_TRAJECTORY_CONTROLLERS[0]
+        r = rospy.Rate(20)
+        self.status_pub.publish('Node init')
         while not rospy.is_shutdown():
-            
             self.flag_pub.publish('now')
             r.sleep()
 
-    def send_cartesian_trajectory(self):
-        print('Inside the command')
-        """Creates a Cartesian trajectory and sends it using the selected action server"""
-        self.switch_controller(self.cartesian_trajectory_controller)
+    def send_joint_trajectory(self):
+        self.status_pub.publish('Starting movement')
+
+        """Creates a trajectory and sends it using the selected action server"""
 
         # make sure the correct controller is loaded and activated
-        goal = FollowCartesianTrajectoryGoal()
+        self.switch_controller(self.joint_trajectory_controller)
         trajectory_client = actionlib.SimpleActionClient(
-            "{}/follow_cartesian_trajectory".format(self.cartesian_trajectory_controller),
-            FollowCartesianTrajectoryAction,
+            "{}/follow_joint_trajectory".format(self.joint_trajectory_controller),
+            FollowJointTrajectoryAction,
         )
 
         # Wait for action server to be ready
@@ -118,34 +120,28 @@ class TrajectoryClient:
             rospy.logerr("Could not reach controller action server.")
             sys.exit(-1)
 
+        # Create and fill trajectory goal
+        goal = FollowJointTrajectoryGoal()
+        goal.trajectory.joint_names = JOINT_NAMES
+
         # The following list are arbitrary positions
         # Change to your own needs if desired
-        pose_list = [
-            geometry_msgs.Pose(
-                geometry_msgs.Vector3(self.posex,self.posey,self.posez), 
-                geometry_msgs.Quaternion(self.ori_x,self.ori_y,self.ori_z,self.ori_w)
-            )
-        ]
+        position_list = [self.best]
         duration_list = [1]
-        for i, pose in enumerate(pose_list):
-            point = CartesianTrajectoryPoint()
-            point.pose = pose
+        for i, position in enumerate(position_list):
+            point = JointTrajectoryPoint()
+            point.positions = position
             point.time_from_start = rospy.Duration(duration_list[i])
             goal.trajectory.points.append(point)
 
-        #self.ask_confirmation(pose_list)
-        rospy.loginfo(
-            "Executing trajectory using the {}".format(self.cartesian_trajectory_controller)
-        )
+        rospy.loginfo("Executing trajectory using the {}".format(self.joint_trajectory_controller))
+
         trajectory_client.send_goal(goal)
         trajectory_client.wait_for_result()
 
         result = trajectory_client.get_result()
-
         rospy.loginfo("Trajectory execution finished in state {}".format(result.error_code))
         rospy.signal_shutdown('Done')
-        
-
 
     def switch_controller(self, target_controller):
         """Activates the desired controller and stops all others from the predefined list above"""
@@ -173,32 +169,57 @@ class TrajectoryClient:
         srv.strictness = SwitchControllerRequest.BEST_EFFORT
         self.switch_srv(srv)
 
-
-        
+    def cleanup (self):
+        self.status_pub.publish('I sent the finish flag')
+        self.finish_pub.publish('now')
 
     def callback_coordinates(self,msg):
-        print('Data recivied')
-        x0 = -.36
-        x1 = 0.33
-        y0 = -.23
-        y1 = -.62
-        z0 = .19
-        z1 = .41
+        self.status_pub.publish('I recieved coordinates')
 
-        x = msg.data[0]
-        y = msg.data[1]
-        z = msg.data[2]
+        x0 = -0.1736
+        y0 = -0.4883
+        z0 = 0.13017
 
-        self.posex = x * (x1-x0) + x0
-        self.posey = y * (y1-y0) + y0
-        self.posez = z * (z1-z0) + z0
+        x1 = 0.13243
+        y1 = -0.6430
+        z1 = 0.31173
 
-        self.send_cartesian_trajectory()
+        rx = 0
+        ry =-pi
+        rz = 0
 
-    def cleanup(self):
-        print('Node in cleanup')
-        self.communication.shutdown()
-        print('Node killed successfully')
+        x = round(msg.data[0],4)
+        y = round(msg.data[1],4)
+        z = round(msg.data[2],4)
+
+        self.posex = round(x * (x1-x0) + x0,4) * 1000
+        self.posey = round(y * (y1-y0) + y0,4) * 1000
+        self.posez = round(z * (z1-z0) + z0,4) * 1000
+
+        home = [pi/2,-pi/2,pi/2,-pi/2,-pi/2,0]
+        U_params = [self.posex,self.posey,self.posez, rx,ry,rz]
+        U = self.igm.vec2rot(U_params[3:6])
+        U[:3, 3] = U_params[0:3]
+        print(U_params)
+
+        Q = []
+        for i in range(1,9):
+            q_igm = self.igm.UR_IGM(U, i)
+            solution=[]
+            element = q_igm.tolist()
+            for number in element:
+                solution.append(round(number[0],4))
+            Q.append(solution)
+            print(solution)
+        
+        self.best = self.igm.select(Q,home)
+        
+        self.status_pub.publish(self.best)
+
+        msg = str('Coordinates: ('+str(self.posex)+','+str(self.posey)+','+str(self.posez)+')')
+        self.status_pub.publish(msg)
+        self.send_joint_trajectory()
+
 
 
 

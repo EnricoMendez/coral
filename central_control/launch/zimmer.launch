@@ -8,8 +8,8 @@
     <param name="pixel_format" value="yuyv" />
   </node>
 
-  <node name="rosserial" pkg="rosserial_python" type="serial_node.py" output="log">
-    <param name="port" value="/dev/ttyACM0" />
+  <node name="rosserial" pkg="rosserial_python" type="serial_node.py" output="screen">
+    <param name="port" value="/dev/ttyACM1" />
   </node>
 
   <node name="zimmer_node" pkg="central_control" type="zimmer.py" output="log">
@@ -18,7 +18,10 @@
   <node name="hand_track" pkg="hand_tracking" type="dtrack_node_2.py" output="log">
   </node>
   
-  <node name="foo" pkg="object_classification" type="object_class_node.py" output="log">
+  <node name="Object_classification" pkg="object_classification" type="object_class_node.py" output="log">
+  </node>
+
+  <node name="Voice_commands" pkg="voice_recognition" type="voice_recognition_node.py" output="log">
   </node>
 
 </launch>

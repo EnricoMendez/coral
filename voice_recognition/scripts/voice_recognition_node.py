@@ -9,6 +9,7 @@ import serial
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import rospkg
 
 
 class voice_recognition():
@@ -18,22 +19,30 @@ class voice_recognition():
         self.status_pub = rospy.Publisher('/voice_recognition/status',String,queue_size=10)
         self.command_pub = rospy.Publisher('/voice_commands',String,queue_size=10)
 
+        rospy.Subscriber("/zimmer/status",String,self.change_interpreter)
+
         ### Constants
-        rospy.on_shutdown(self.cleanup)
-        self.commands = ['noise','go', 'take','bring','cancel','one','two','three','four','five','six','seven']
-        self.model_name = 'command_model.tflite'
-        self.interpreter = tf.lite.Interpreter(model_path=self.model_name)
-        self.self.commands=rospy.Publisher("voice_commands",String,queue_size=10)
+        self.commands = ['noise', 'take','bring','go']
+        rospack = rospkg.RosPack()
+        rospack.list() 
+        pkg_path = str(rospack.get_path('voice_recognition'))
+        self.commands_model_name = pkg_path + '/scripts/commands.tflite'
+        self.commands_interpreter = tf.lite.Interpreter(model_path=self.commands_model_name)
+
+        self.numbers_model_name = pkg_path + '/scripts/numbers.tflite'
+        self.numbers_interpreter = tf.lite.Interpreter(model_path=self.numbers_model_name)
+        self.interpreter = self.commands_interpreter
         self.input_details = self.interpreter.get_input_details()
         self.output_details = self.interpreter.get_output_details()
         self.port_name = serial.Serial("/dev/ttyACM0", 9600)
         self.fs = 16000
-        win = np.hamming(1024)
-        nfft = 1024
-        self.hop = nfft // 2
+        self.win = np.hamming(1024)
+        self.nfft = 1024
+        self.hop = self.nfft // 2
         self.time_per_sample = 2
         self.samples_per_record = int (3327)
-        self.threshold = 0.9
+        self.threshold = 0.60
+
 
         ### Variables
         self.inputs=[]
@@ -44,9 +53,14 @@ class voice_recognition():
         
         ### Main loop ###
         
-        r = rospy.Rate(10)
         self.status_pub.publish('node init')
+        rospy.on_shutdown(self.cleanup)
+        r = rospy.Rate(.5)
         while not rospy.is_shutdown():
+            while len(self.data_save) < self.samples_per_record:
+                self.data_record()
+            self.command_recognition()
+            self.send_command()
             r.sleep()
     
     def prediction(self,input):
@@ -62,7 +76,9 @@ class voice_recognition():
         # Obtener los resultados del modelo
         output_data = self.interpreter.get_tensor(self.output_details[0]['index'])
         true = np.argmax(output_data[0])
-        return self.commands[true],output_data[0][true]
+        output = self.commands[true]
+        confidence = output_data[0][true]
+        return output, confidence
 
     def data_record(self):
         data = self.port_name.readline()
@@ -78,17 +94,36 @@ class voice_recognition():
         plt.close()
         self.data_save = []
         spec = np.expand_dims(spec, axis=0)
-        self.voice_command,self.confidence = self.prediction(spec,self.input_details,self.interpreter,self.output_details)
+        self.voice_command,self.confidence = self.prediction(spec)
 
     def send_command(self):
-        msg = str(self.voice_command)+' recognize with '+ str(round(self.confidence,3)) + 'of confidence'
+        msg = str(self.voice_command)+' recognize with '+ str(round(self.confidence,3)) + ' of confidence'
         self.status_pub.publish(msg)
         if self.confidence > self.threshold:
-            self.status_pub('Command published')
+            self.status_pub.publish('Command published')
             self.command_pub.publish(self.voice_command)
+        time.sleep(1)
+
+    def change_interpreter(self,data):
+        msg = data.data
+
+        if msg == 'Bring rutine' or msg == 'Take rutine':
+            self.interpreter = self.numbers_interpreter
+            self.input_details = self.interpreter.get_input_details()
+            self.output_details = self.interpreter.get_output_details()
+            self.commands = ['noise','cancel','one','two','three','four','five','six','seven']
+            self.status_pub.publish('Changing to numbers interpreter')
+        elif msg == 'Waiting for go':
+            self.interpreter = self.commands_interpreter
+            self.input_details = self.interpreter.get_input_details()
+            self.output_details = self.interpreter.get_output_details()
+            self.commands = ['noise', 'take','bring','go']
+            self.status_pub.publish('Changing to commands interpreter')
+
+
 
     def cleanup(self):
-        self.port.close()
+        self.port_name.close()
         self.status_pub.publish("Port closed")
         self.status_pub.publish('Node killed')
 

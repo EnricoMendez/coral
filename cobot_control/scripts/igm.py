@@ -1,5 +1,7 @@
+#!/usr/bin/env python3
 import math
 import numpy as np
+
 
 
 class igm():
@@ -14,12 +16,71 @@ class igm():
         self.D5 = 99.7
         self.D6 = 99.6 + 175.5
 
+    def select(self,q_sols, q_d, w=[1]*6):
+        """Select the optimal solutions among a set of feasible joint value 
+        solutions.
+
+        Args:
+            q_sols: A set of feasible joint value solutions (unit: radian)
+            q_d: A list of desired joint value solution (unit: radian)
+            w: A list of weight corresponding to robot joints
+
+        Returns:
+            A list of optimal joint value solution.
+        """
+        
+        q1max = 120 * math.pi / 180
+        q1min = 30  * math.pi / 180
+
+        q2min = -120 * math.pi / 180
+        q2max = -50  * math.pi / 180
+
+        q3max = 180  * math.pi / 180
+        q3min = 0    * math.pi / 180
+
+        q4max = -60  * math.pi / 180
+        q4min = -120    * math.pi / 180
+
+
+
+
+        for q in q_sols:
+            if q1min > q[0]  or q[0] > q1max or math.isnan(q[0]): 
+                print('Fails in q1')
+                print(q[0])
+                continue
+            if q2min > q[1]  or q[1] > q2max or math.isnan(q[1]):
+                print('Fails in q2')
+                print(q[1])
+                continue
+            if q3min > q[2]  or q[2] > q3max or math.isnan(q[2]):
+                print('Fails in q3')
+                print(q[2])
+                continue
+            if q4min > q[3]  or q[3] > q4max or math.isnan(q[3]):
+                print('Fails in q4')
+                print(q[3])
+                continue
+            return q
+        
+        print('Not any solution')
+        home = [math.pi/2,-math.pi/2,math.pi/2,-math.pi/2,-math.pi/2,0]
+        return home
+
+
+
+
+        # error = []
+        # for q in q_sols:
+        #     error.append(sum([w[i] * (q[i] - q_d[i]) ** 2 for i in range(6)]))
+        
+        # return q_sols[error.index(min(error))]
+
     def int2bit(self,X, n):
         Y = []
         for element in X:
             # Convierte el elemento en su representación binaria y rellena con ceros a la izquierda
             binary = bin(element)[2:].zfill(n)
-            print(binary)
             # Convierte la representación binaria en una lista de enteros
             bit_list = [int(bit) for bit in binary]
             Y.append(bit_list)
@@ -104,7 +165,6 @@ class igm():
         PZ = U[2, 3]
         
         sol = self.int2bit([i-1], 3)[0]
-        print(sol)
         
         X = PX - AX * self.D6
         Y = AY * self.D6 - PY
@@ -145,14 +205,10 @@ class igm():
         Z2 = PZ - self.D1 - AZ * self.D6 - AZ * self.D4 * C5 + self.D5 * NZ * C6 + self.D5 * SZ * S6 - self.D4 * SZ * C6 * S5 + self.D4 * NZ * S5 * S6
         q23 = self.type8(X, Y, Z1, Z2)
         if sol[2] == 0:
-            print('q_igm: ',q_igm[1])
-            print('q23: ',q23[1, 0])
             q_igm[1] = q23[0, 0]
             q_igm[2] = q23[1, 0]
             # q_igm[1:3] = q23[:, 0]
         else:
-            print('q_igm: ',q_igm)
-            print('q23: ',q23)
             q_igm[1] = q23[0, 1]
             q_igm[2] = q23[1, 1]
             # q_igm[1:3] = q23[:, 1]

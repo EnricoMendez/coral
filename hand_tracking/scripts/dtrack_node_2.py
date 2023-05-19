@@ -47,7 +47,7 @@ class tracker_node():
         self.position_msg = Float32MultiArray()
         
         ###********** INIT NODE **********###  
-        r = rospy.Rate(10)
+        r = rospy.Rate(20)
         self.status.publish('initialized node')
 
         while not rospy.is_shutdown():

@@ -47,7 +47,7 @@ class zimmer():
 
         
         ### Main loop ###
-        self.status_pub.publish('Node initialized')
+        self.status_pub.publish('Zimmer initialized')
         self.Ur_bring.start()
         self.status_pub.publish('Comunication initialized')
         self.status_pub.publish('Enter to continue')
@@ -61,14 +61,15 @@ class zimmer():
         
         r = rospy.Rate(10)
         self.status_pub.publish('node init')
+        self.status_pub.publish('Waiting for take or bring command')
         while not rospy.is_shutdown():
-            # print('Not finish')
             if self.take_flag:
-                self.status_pub.publish('Take flag')
+                self.status_pub.publish('Take rutine')
                 self.drums_take()
             if self.bring_flag:
-                self.status_pub.publish('Bring flag')
+                self.status_pub.publish('Bring rutine')
                 self.guitar_bring()
+
             r.sleep()
 
     def flag_callback(self,data):
@@ -76,17 +77,14 @@ class zimmer():
         self.coord_pub.publish(self.coordinates)
     
     def finish_callback(self,data):
-        # os.system('clear')
         self.move.shutdown()
-        # time.sleep(3)
         self.Ur_bring.shutdown()
         self.status_pub.publish('Comunication killed')
         self.status_pub.publish('Move has finished Ill wait')
         self.finish_flag = True
-        # self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
-        # self.Ur_bring.start()
-        # self.status_pub.publish('Comunication initialized')
-        # time.sleep(1)
+        self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
+        self.Ur_bring.start()
+        self.status_pub.publish('Comunication initialized')
 
     def guitar_bring(self):
         object = self.check_vr_num()
@@ -105,23 +103,24 @@ class zimmer():
         while not self.command == 'go':
             pass
         self.message_pub.publish(22)
-        # time.sleep(1)
-        self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
-        self.Ur_bring.start()
-        self.status_pub.publish('Comunication initialized')
         self.bring_flag = False
+        self.status_pub.publish('Waiting for take or bring command')
+        
 
     def check_vr_num(self):
         num_op = ['0','one','two','three','four','five','six','seven']
+        
 
         if self.command in num_op:
+            msg = str('I will go for piece ' + str(self.command))
+            self.status_pub.publish(msg)
             return num_op.index(self.command) + 10
         else:
             return 0
 
     def drums_take(self):
-        self.piano_ur()
         self.status_pub.publish('I will start external control')
+        self.piano_ur()
         while not self.finish_flag:
             pass
         self.status_pub.publish('Waiting for go')
@@ -130,9 +129,6 @@ class zimmer():
                 return
             pass
         self.message_pub.publish(22)
-        self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
-        self.Ur_bring.start()
-        self.status_pub.publish('Comunication initialized')
         time.sleep(5)
         tiempo_inicial = time.time()
         tiempo_actual = time.time()
@@ -144,6 +140,7 @@ class zimmer():
         self.message_pub.publish(self.object_class)
         time.sleep(3)
         self.take_flag = False
+        self.status_pub.publish('Waiting for take or bring command')
 
 
     def check_cancel(self):
@@ -160,10 +157,10 @@ class zimmer():
         self.finish_flag = False
         self.move = self.launch_file(self.pkg_move,self.file_move)
         self.move.start()
-        self.status_pub.publish('wait for flag')
+        # self.status_pub.publish('wait for flag')
         while not self.coord_flag:
             pass
-        self.status_pub.publish('Flag recieved')
+        # self.status_pub.publish('Flag recieved')
         self.coord_flag = False
 
         
@@ -181,8 +178,6 @@ class zimmer():
 
     def vr_callback(self,data):
         self.command = data.data
-        self.status_pub.publish('Command found')
-        self.status_pub.publish(self.command)
 
         if self.command == 'stop':
             self.message_pub.publish(31)
@@ -190,7 +185,6 @@ class zimmer():
             return
         if self.take_flag or self.bring_flag :
             return
-        # self.status_pub.publish('I will compare')
                                                                                                                                                                                                                                                                                                                                                                                                                                     
         if self.command == 'take':
             self.message_pub.publish(21)

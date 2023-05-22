@@ -2,6 +2,7 @@
 import roslaunch
 import rospy
 import rospkg
+from std_msgs.msg import Int32MultiArray
 from std_msgs.msg import Float32MultiArray
 from std_msgs.msg import String
 from std_msgs.msg import Int32
@@ -17,6 +18,7 @@ class zimmer():
         self.coord_pub=rospy.Publisher("coordinates_coral",Float32MultiArray,queue_size=10)
         self.message_pub = rospy.Publisher('arduino_commands',Int32,queue_size=10)
         self.status_pub = rospy.Publisher('/zimmer/status',String,queue_size=10)
+        self.inventory_pub = rospy.Publisher('/zimmer/inventory',Int32MultiArray,queue_size=10)
 
         ############################### SUBSCRIBERS #####################################   
         self.sub1 = rospy.Subscriber("/flag_coordinates",String,self.flag_callback) 
@@ -44,6 +46,9 @@ class zimmer():
         self.finish_flag = False
         self.bring_flag = False
         self.take_flag = False
+        self.inv_msg = Int32MultiArray()
+        self.inv_msg.data = self.inventory
+        self.inventory_pub.publish(self.inv_msg)
         self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
         self.coordinates = 0
         self.object_class = 0
@@ -52,20 +57,27 @@ class zimmer():
         self.command=''
         self.com_flag = False
         self.mute = True
+        ans = 'no'
 
         
         ### Main loop ###
         self.status_pub.publish('Zimmer initialized')
         self.Ur_bring.start()
         self.status_pub.publish('Comunication initialized')
-        self.status_pub.publish('Press enter to continue')
-        input('CLick to kill communication')
-        self.Ur_bring.shutdown()
-        self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
-        time.sleep(2)
-        self.Ur_bring.start()
-        self.com_flag = True
-        
+        while ans != '':
+            self.inventory_pub.publish(self.inv_msg)
+            self.status_pub.publish('Press enter to kill communication')
+            input('Click to kill communication')
+            self.status_pub.publish('Communication killed')
+            self.Ur_bring.shutdown()
+            self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
+            time.sleep(2)
+            self.Ur_bring.start()
+            self.com_flag = True
+            self.status_pub.publish('Press enter when calibration proccess is complete')
+            ans = input()
+        self.inventory_pub.publish(self.inv_msg)
+        self.mute = False
         r = rospy.Rate(10)
         self.status_pub.publish('Node initialized')
         while not rospy.is_shutdown():
@@ -90,6 +102,8 @@ class zimmer():
     def inventory_check(self,piece):
         if self.inventory[piece] > 0:
             self.inventory[piece] -= 1
+            self.inv_msg.data = self.inventory
+            self.inventory_pub.publish(self.inv_msg)
             return True
         else:
             msg = 'Piece '+str(piece)+' out of stock'
@@ -99,7 +113,8 @@ class zimmer():
     def capacity_check(self,piece):
         if self.inventory[piece] < self.capacity[piece]:
             self.inventory[piece] += 1
-            
+            self.inv_msg.data = self.inventory
+            self.inventory_pub.publish(self.inv_msg)
             return True
         else:
             msg = 'No more space available for piece ' + str(piece)
@@ -222,6 +237,8 @@ class zimmer():
 
 
     def vr_callback(self,data):
+        if self.mute:
+            return
         self.command = data.data
         if self.take_flag or self.bring_flag :
             return

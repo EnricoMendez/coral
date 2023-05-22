@@ -127,7 +127,7 @@ class TrajectoryClient:
         # The following list are arbitrary positions
         # Change to your own needs if desired
         position_list = [self.best]
-        duration_list = [1]
+        duration_list = [1.4]
         for i, position in enumerate(position_list):
             point = JointTrajectoryPoint()
             point.positions = position

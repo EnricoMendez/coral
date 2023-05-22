@@ -22,7 +22,7 @@ class voice_recognition():
         rospy.Subscriber("/zimmer/status",String,self.change_interpreter)
 
         ### Constants
-        self.commands = ['noise', 'take','bring','go']
+        self.commands = ['noise', 'take','bring','go','cancel']
         rospack = rospkg.RosPack()
         rospack.list() 
         pkg_path = str(rospack.get_path('voice_recognition'))
@@ -53,9 +53,10 @@ class voice_recognition():
         
         ### Main loop ###
         
-        self.status_pub.publish('node init')
         rospy.on_shutdown(self.cleanup)
         r = rospy.Rate(.5)
+        time.sleep(0.2)
+        self.status_pub.publish('Node initialized')
         while not rospy.is_shutdown():
             while len(self.data_save) < self.samples_per_record:
                 self.data_record()
@@ -107,22 +108,22 @@ class voice_recognition():
     def change_interpreter(self,data):
         msg = data.data
 
-        if msg == 'Bring rutine' or msg == 'Take rutine':
+        if msg == 'Bring routine' or msg == 'Take routine' :
             self.interpreter = self.numbers_interpreter
             self.input_details = self.interpreter.get_input_details()
             self.output_details = self.interpreter.get_output_details()
             self.commands = ['noise','cancel','one','two','three','four','five','six','seven']
             self.status_pub.publish('Changing to numbers interpreter')
-        elif msg == 'Waiting for go':
+        elif msg == 'Waiting for go'or msg == 'Routine canceled':
             self.interpreter = self.commands_interpreter
             self.input_details = self.interpreter.get_input_details()
             self.output_details = self.interpreter.get_output_details()
-            self.commands = ['noise', 'take','bring','go']
+            self.commands = ['noise', 'take','bring','go','cancel']
             self.status_pub.publish('Changing to commands interpreter')
 
 
 
-    def cleanup(self):
+    def cleanup(self) :
         self.port_name.close()
         self.status_pub.publish("Port closed")
         self.status_pub.publish('Node killed')

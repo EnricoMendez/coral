@@ -33,6 +33,12 @@ class zimmer():
         self.file_move = 'take_control.launch'
         self.pkg_Ur_bring = 'cobot_control'
         self.file_Ur_bring = 'urcom.launch'
+
+        ### Inventory
+
+        self.inventory = [0,1,1,2,2,2,1,1]
+        self.capacity = [0,1,1,2,2,2,1,1]
+
         ### Variables
         self.coord_flag = False
         self.finish_flag = False
@@ -44,47 +50,79 @@ class zimmer():
         self.object_class_record = [0,0,0,0,0,0,0,0,0,0]
         self.index=0
         self.command=''
+        self.com_flag = False
+        self.mute = True
 
         
         ### Main loop ###
         self.status_pub.publish('Zimmer initialized')
         self.Ur_bring.start()
         self.status_pub.publish('Comunication initialized')
-        self.status_pub.publish('Enter to continue')
-        input('CLick to continue')
+        self.status_pub.publish('Press enter to continue')
+        input('CLick to kill communication')
         self.Ur_bring.shutdown()
         self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
         time.sleep(2)
-        self.status_pub.publish('Comunication killed')
         self.Ur_bring.start()
-        self.status_pub.publish('Comunication initialized')
+        self.com_flag = True
         
         r = rospy.Rate(10)
-        self.status_pub.publish('node init')
-        self.status_pub.publish('Waiting for take or bring command')
+        self.status_pub.publish('Node initialized')
         while not rospy.is_shutdown():
-            if self.take_flag:
-                self.status_pub.publish('Take rutine')
-                self.drums_take()
-            if self.bring_flag:
-                self.status_pub.publish('Bring rutine')
-                self.guitar_bring()
-
+            if self.com_flag:
+                self.status_pub.publish('Waiting for take or bring command')
+                while not (self.take_flag or self.bring_flag):
+                    pass
+                if self.take_flag:
+                    self.status_pub.publish('Take routine')
+                    self.drums_take()
+                if self.bring_flag:
+                    self.status_pub.publish('Bring routine')
+                    self.guitar_bring()
+            else: 
+                pass
             r.sleep()
 
     def flag_callback(self,data):
         self.coord_flag = True
         self.coord_pub.publish(self.coordinates)
+
+    def inventory_check(self,piece):
+        if self.inventory[piece] > 0:
+            self.inventory[piece] -= 1
+            return True
+        else:
+            msg = 'Piece '+str(piece)+' out of stock'
+            self.status_pub.publish(msg)
+            False
     
+    def capacity_check(self,piece):
+        if self.inventory[piece] < self.capacity[piece]:
+            self.inventory[piece] += 1
+            
+            return True
+        else:
+            msg = 'No more space available for piece ' + str(piece)
+            self.status_pub.publish(msg)
+            time.sleep(2)
+            self.status_pub.publish('Say go to release the piece')
+            time.sleep(1)
+            while not self.command == 'go':
+                pass
+            self.message_pub.publish(22)
+            self.take_flag = False
+            return False
+        
     def finish_callback(self,data):
         self.move.shutdown()
+        self.com_flag = False
         self.Ur_bring.shutdown()
-        self.status_pub.publish('Comunication killed')
-        self.status_pub.publish('Move has finished Ill wait')
         self.finish_flag = True
+        # self.status_pub.publish('Comunication killed')
         self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
         self.Ur_bring.start()
-        self.status_pub.publish('Comunication initialized')
+        # self.status_pub.publish('Comunication initialized')
+        self.com_flag = True
 
     def guitar_bring(self):
         object = self.check_vr_num()
@@ -92,8 +130,10 @@ class zimmer():
             if self.check_cancel():
                 return
             object = self.check_vr_num()
+        piece = object-10
+        if not self.inventory_check(piece):
+            return
         self.message_pub.publish(object)
-        self.status_pub.publish('Waiting to go home')
         time.sleep(13)
         self.status_pub.publish('I will start external control')
         self.piano_ur()
@@ -104,8 +144,6 @@ class zimmer():
             pass
         self.message_pub.publish(22)
         self.bring_flag = False
-        self.status_pub.publish('Waiting for take or bring command')
-        
 
     def check_vr_num(self):
         num_op = ['0','one','two','three','four','five','six','seven']
@@ -114,12 +152,13 @@ class zimmer():
         if self.command in num_op:
             msg = str('I will go for piece ' + str(self.command))
             self.status_pub.publish(msg)
-            return num_op.index(self.command) + 10
+            return num_op.index(self.command) + 10        
         else:
             return 0
 
     def drums_take(self):
         self.status_pub.publish('I will start external control')
+        # time.sleep(0.2)
         self.piano_ur()
         while not self.finish_flag:
             pass
@@ -133,20 +172,26 @@ class zimmer():
         tiempo_inicial = time.time()
         tiempo_actual = time.time()
 
-        while tiempo_actual < tiempo_inicial + 5:
+        while tiempo_actual < tiempo_inicial + 6:
             if self.check_cancel():
                 return
             tiempo_actual = time.time()
+        if self.object_class == 8:
+            self.status_pub.publish('No object detected')
+            return
         self.message_pub.publish(self.object_class)
+        if not self.capacity_check(self.object_class):
+            return
         time.sleep(3)
         self.take_flag = False
-        self.status_pub.publish('Waiting for take or bring command')
 
 
     def check_cancel(self):
         if self.command == 'cancel':
                 self.message_pub.publish(30)
                 self.take_flag = False
+                self.bring_flag = False
+                self.status_pub.publish('Routine canceled')
                 return True
         return False
 
@@ -178,11 +223,6 @@ class zimmer():
 
     def vr_callback(self,data):
         self.command = data.data
-
-        if self.command == 'stop':
-            self.message_pub.publish(31)
-            rospy.is_shutdown('Program was stopped')
-            return
         if self.take_flag or self.bring_flag :
             return
                                                                                                                                                                                                                                                                                                                                                                                                                                     

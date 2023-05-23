@@ -121,8 +121,6 @@ class voice_recognition():
             self.commands = ['noise', 'take','bring','go','cancel']
             self.status_pub.publish('Changing to commands interpreter')
 
-
-
     def cleanup(self) :
         self.port_name.close()
         self.status_pub.publish("Port closed")

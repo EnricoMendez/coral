@@ -73,9 +73,9 @@ class tracker_node():
         self.centerPoint2 = None
         self.dep = self.depth_array
 
-        if self.hands: #Obtain all data given per hand
-            
+        if self.hands: #Obtain dictionary with all data given per hand
             # Hand 1
+
             self.hand1 = self.hands[0]
             self.coord_x_hand1 = self.hand1["lmList"][9][0]
             self.coord_y_hand1 = self.hand1["lmList"][9][1]
@@ -86,7 +86,7 @@ class tracker_node():
                 self.hand2 = self.hands[1]
                 self.coord_x_hand2 = self.hand2["lmList"][9][0]
                 self.coord_y_hand2 = self.hand2["lmList"][9][1]
-                self.centerPoint2 = (self.coord_x_hand2,self.coord_y_hand2) # center of the hand cx,cy  
+                self.centerPoint2 = (self.coord_x_hand2,self.coord_y_hand2) 
 
             self.hands_array = (self.centerPoint1, self.centerPoint2)
             self.max_coord = self.risen_hand(self.hands_array)
@@ -97,28 +97,34 @@ class tracker_node():
                 self.max_coord = self.image_width, self.max_coord[1]
             if self.max_coord[1] > self.image_height:
                 self.max_coord = self.max_coord[0], self.image_height
-        
-                # Depth hand calculation
+        # Depth hand calculation
         if self.max_coord[0] is not None:
             x = int(self.max_coord[0] * self.depx / self.image_width)
             y = int(self.max_coord[1] * self.depy / self.image_height)
-            if 0 < y < 480 and 0 < x < 848 and 0 < (self.dep[y, x] / 10) < 100:
-                self.hand_depth = self.dep[y, x] / 10
+            if (0 < y < 480) and (0 < x < 848):
+                if 100 >  (self.dep[y, x] / 10) > 0:
+                    self.hand_depth = self.dep[y, x] / 10
 
-        # Conversion of values
         if self.hand_depth is not None:
-            self.hand_position = (
-                self.max_coord[0] / self.image_width,
-                1 - (self.max_coord[1] / self.image_height),
-                self.hand_depth / 60
-            )
-            self.hand_position = tuple(round(max(0.0, min(value, 1.0)), 3) for value in self.hand_position)
+            # Conversion of values
+            x_ratio = self.max_coord[0] / self.image_width
+            y_ratio = 1 - (self.max_coord[1] / self.image_height)
+            depth_ratio = self.hand_depth / 60
 
+            # Limit values to range [0.0, 1.0]
+            x_ratio = max(0.0, min(x_ratio, 1.0))
+            y_ratio = max(0.0, min(y_ratio, 1.0))
+            depth_ratio = max(0.0, min(depth_ratio, 1.0))
 
+            # Round values to 3 decimal places
+            x_ratio = round(x_ratio, 3)
+            y_ratio = round(y_ratio, 3)
+            depth_ratio = round(depth_ratio, 3)
+
+            self.hand_position = x_ratio, y_ratio, depth_ratio
 
     def publish(self):
-        
-        #Coordinates publisher
+
         self.position_msg.data = self.hand_position
         if self.hand_position is not None:
             msg = 'Hand position: '+ str(self.hand_position)

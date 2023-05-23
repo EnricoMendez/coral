@@ -210,8 +210,8 @@ class zimmer():
                 return True
         return False
 
-
-
+    def clean(self):
+        self.command = ''
 
     def piano_ur(self):
         self.finish_flag = False

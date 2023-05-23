@@ -38,7 +38,7 @@ class supervisor():
         rate = self.text_speech.getProperty('rate')
         self.text_speech.setProperty('rate', 175)
 
-        r = rospy.Rate(1)
+        r = rospy.Rate(20)
         
         while not rospy.is_shutdown():
             os.system('clear')

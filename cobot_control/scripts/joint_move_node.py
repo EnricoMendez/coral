@@ -176,13 +176,14 @@ class TrajectoryClient:
     def callback_coordinates(self,msg):
         self.status_pub.publish('I recieved coordinates')
 
-        x0 = -0.1736
-        y0 = -0.4883
-        z0 = 0.13017
-
-        x1 = 0.13243
+        x0 = -0.22275
+        y0 = -0.42281
+        z0 = 0.129553
+        
+        x1 = 0.2297
         y1 = -0.6430
-        z1 = 0.31173
+        z1 = 0.3849
+        
 
         rx = 0
         ry =-pi

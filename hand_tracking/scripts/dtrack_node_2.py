@@ -116,12 +116,12 @@ class tracker_node():
             x = int(self.max_coord[0] * self.depx / self.image_width)
             y = int(self.max_coord[1] * self.depy / self.image_height)
             if (0 < y < 480) and (0 < x < 848):
-                if 150 >  (self.dep[y, x] / 10) > 0:
+                if 100 >  (self.dep[y, x] / 10) > 0:
                     self.hand_depth = self.dep[y, x] / 10
 
             if self.hand_depth is not None:
                 #Convertion of values 
-                self.hand_position = self.max_coord[0] / self.image_width, 1-(self.max_coord[1] / self.image_height), self.hand_depth /80
+                self.hand_position = self.max_coord[0] / self.image_width, 1-(self.max_coord[1] / self.image_height), self.hand_depth / 60
                 self.hand_position = round(self.hand_position[0],3), round(self.hand_position[1],3), round(self.hand_position[2],3)
                 #edge cases
                 if self.hand_position[0] > 1.0: self.hand_position = 1.0, self.hand_position[1], self.hand_position[2]

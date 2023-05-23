@@ -53,9 +53,7 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5) a
                 thickness = 1
                 image = cv2.putText(image, text, coordinates, font, fontScale, color, thickness, cv2.LINE_AA)
                 c = c+20
-                i = i+1
-
-                              
+                i = i+1              
 
         # Show image    
         cv2.imshow('Hand Tracking', image)

@@ -260,10 +260,6 @@ class zimmer():
         else:
             self.index+=1
         self.object_class = statistics.mode(self.object_class_record)
-        
-
-
-        
 
 
     def cleanup(self):

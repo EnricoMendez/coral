@@ -79,9 +79,3 @@ if __name__ == '__main__':
     rospy.init_node('communication_ur_node', anonymous=True)
     communication_ur_node()
     
-  
-  
-  
-  
-  
-  

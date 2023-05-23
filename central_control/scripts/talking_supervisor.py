@@ -2,9 +2,9 @@
 
 import rospy
 from std_msgs.msg import String
+from gtts import gTTS
 import os
 from std_msgs.msg import Int32
-import pyttsx3
 from std_msgs.msg import Int32MultiArray
 
 class supervisor():
@@ -30,14 +30,6 @@ class supervisor():
         self.invetory_msg = []
         self.capacity = [0,1,1,2,2,2,1,1]
 
-
-        ### Set voice configuration
-        self.text_speech = pyttsx3.init(driverName='espeak')
-        voices = self.text_speech.getProperty('voices')
-        self.text_speech.setProperty('voice', 'google')
-        rate = self.text_speech.getProperty('rate')
-        self.text_speech.setProperty('rate', 175)
-
         r = rospy.Rate(20)
         
         while not rospy.is_shutdown():
@@ -49,11 +41,15 @@ class supervisor():
         list = [list[1],list[2],list[3],list[4],list[5],msg]
         return list
     
+    def talk(self,msg):
+        tts = gTTS(msg, lang='en-us')
+        tts.save('msg.mp3')
+        os.system('mpg123 msg.mp3 > /dev/null 2>&1')
+    
     def zimmer(self,data):
         self.zimmer_msg = self.message_sort(data.data,self.zimmer_msg)
         answer = data.data
-        self.text_speech.say(answer)
-        self.text_speech.runAndWait()
+        self.talk(answer)
 
     def inventory(self,data):
         self.invetory_msg = data.data
@@ -97,7 +93,7 @@ class supervisor():
             print('\t'+element)
         print('Inventory:')
         for i in range(1,len(self.invetory_msg)):
-            print('\tPiece ' + str(1) + ': ' + str(self.invetory_msg[i]) + '/' + str(self.capacity[i]))
+            print('\tPiece ' + str(i) + ': ' + str(self.invetory_msg[i]) + '/' + str(self.capacity[i]))
            
               
         

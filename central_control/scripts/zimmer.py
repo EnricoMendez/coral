@@ -77,19 +77,25 @@ class zimmer():
             self.status_pub.publish('Press enter when calibration proccess is complete')
             ans = input()
         self.inventory_pub.publish(self.inv_msg)
-        self.mute = False
+        
         r = rospy.Rate(10)
         self.status_pub.publish('Node initialized')
         while not rospy.is_shutdown():
             if self.com_flag:
                 self.status_pub.publish('Waiting for take or bring command')
+                time.sleep(2)
+                self.mute = False
                 while not (self.take_flag or self.bring_flag):
                     pass
                 if self.take_flag:
+                    self.mute = True
                     self.status_pub.publish('Take routine')
                     self.drums_take()
                 if self.bring_flag:
+                    self.mute = True
                     self.status_pub.publish('Bring routine')
+                    time.sleep(3)
+                    self.mute = False
                     self.guitar_bring()
             else: 
                 pass
@@ -119,13 +125,16 @@ class zimmer():
         else:
             msg = 'No more space available for piece ' + str(piece)
             self.status_pub.publish(msg)
-            time.sleep(2)
+            time.sleep(5)
             self.status_pub.publish('Say go to release the piece')
-            time.sleep(1)
+            time.sleep(2)
+            self.clean()
+            self.mute = False
             while not self.command == 'go':
                 pass
             self.message_pub.publish(22)
             self.take_flag = False
+            self.mute = True
             return False
         
     def finish_callback(self,data):
@@ -140,23 +149,28 @@ class zimmer():
         self.com_flag = True
 
     def guitar_bring(self):
+        self.clean()
         object = self.check_vr_num()
         while not object:
             if self.check_cancel():
                 return
             object = self.check_vr_num()
+        self.mute = True
         piece = object-10
         if not self.inventory_check(piece):
             return
         self.message_pub.publish(object)
         time.sleep(13)
-        self.status_pub.publish('I will start external control')
+        # self.status_pub.publish('I will start external control')
         self.piano_ur()
         while not self.finish_flag:
             pass
         self.status_pub.publish('Waiting for go')
+        time.sleep(1)
+        self.mute = False
         while not self.command == 'go':
             pass
+        self.mute = True
         self.message_pub.publish(22)
         self.bring_flag = False
 
@@ -172,41 +186,59 @@ class zimmer():
             return 0
 
     def drums_take(self):
-        self.status_pub.publish('I will start external control')
+        self.clean()
+        # self.status_pub.publish('I will start external control')
         # time.sleep(0.2)
         self.piano_ur()
         while not self.finish_flag:
             pass
         self.status_pub.publish('Waiting for go')
+        time.sleep(1)
+        self.mute = False
         while not self.command == 'go':
             if self.check_cancel():
                 return
             pass
+        self.clean()
+        self.mute = True
         self.message_pub.publish(22)
         time.sleep(5)
         tiempo_inicial = time.time()
         tiempo_actual = time.time()
-
+        self.mute = False
         while tiempo_actual < tiempo_inicial + 6:
             if self.check_cancel():
                 return
             tiempo_actual = time.time()
+        self.mute = True
+        self.message_pub.publish(self.object_class)
         if self.object_class == 8:
             self.status_pub.publish('No object detected')
+            time.sleep(7)
+            self.status_pub.publish('Say go to release the piece')
+            time.sleep(1)
+            self.mute = False
+            while not self.command == 'go':
+                pass
+            self.mute = True
+            self.message_pub.publish(22)
+            self.take_flag = False
+
             return
-        self.message_pub.publish(self.object_class)
         if not self.capacity_check(self.object_class):
             return
-        time.sleep(3)
+        time.sleep(15)
         self.take_flag = False
 
 
     def check_cancel(self):
         if self.command == 'cancel':
+                self.mute = True
                 self.message_pub.publish(30)
                 self.take_flag = False
                 self.bring_flag = False
                 self.status_pub.publish('Routine canceled')
+                self.clean()
                 return True
         return False
 

@@ -18,8 +18,7 @@ class tracker_node():
         self.depth_sub = rospy.Subscriber("/camera/depth/image_rect_raw", Image, self.dep_image_callback)
         
         ### Publishers
-        self.hand_position_pub = rospy.Publisher("hand_position", String, queue_size=1)
-        self.hand_position_pub2 = rospy.Publisher("/hand_track/hand_position", Float32MultiArray, queue_size=1)
+        self.hand_position_pub = rospy.Publisher("/hand_track/hand_position", Float32MultiArray, queue_size=1)
         self.status = rospy.Publisher("/hand_track/status", String, queue_size=1)
         #self.image_position_pub = rospy.Publisher("image_position", Image, queue_size=1)
         
@@ -74,9 +73,9 @@ class tracker_node():
         self.centerPoint2 = None
         self.dep = self.depth_array
 
-        if self.hands: #Obtain dictionary with all data given per hand
+        if self.hands: #Obtain all data given per hand
+            
             # Hand 1
-
             self.hand1 = self.hands[0]
             self.coord_x_hand1 = self.hand1["lmList"][9][0]
             self.coord_y_hand1 = self.hand1["lmList"][9][1]
@@ -87,7 +86,7 @@ class tracker_node():
                 self.hand2 = self.hands[1]
                 self.coord_x_hand2 = self.hand2["lmList"][9][0]
                 self.coord_y_hand2 = self.hand2["lmList"][9][1]
-                self.centerPoint2 = (self.coord_x_hand2,self.coord_y_hand2) 
+                self.centerPoint2 = (self.coord_x_hand2,self.coord_y_hand2) # center of the hand cx,cy  
 
             self.hands_array = (self.centerPoint1, self.centerPoint2)
             self.max_coord = self.risen_hand(self.hands_array)
@@ -98,45 +97,32 @@ class tracker_node():
                 self.max_coord = self.image_width, self.max_coord[1]
             if self.max_coord[1] > self.image_height:
                 self.max_coord = self.max_coord[0], self.image_height
-
-        # Publish image    
-        #if self.max_coord[0] is not None:
-        #    self.image = cv2.circle(self.cv_image, (self.max_coord[0],self.max_coord[1]), 10, (0,0,255), 3)
-        #else: 
-        #    self.image = self.cv_image
-        #self.image_message = self.bridge_object.cv2_to_imgmsg(self.image, encoding="passthrough")
-
-    def publish(self):
-
-        # Image publisher
-        #self.image_position_pub.publish(self.image_message)
         
-        # Depth hand calculation
+                # Depth hand calculation
         if self.max_coord[0] is not None:
             x = int(self.max_coord[0] * self.depx / self.image_width)
             y = int(self.max_coord[1] * self.depy / self.image_height)
-            if (0 < y < 480) and (0 < x < 848):
-                if 100 >  (self.dep[y, x] / 10) > 0:
-                    self.hand_depth = self.dep[y, x] / 10
+            if 0 < y < 480 and 0 < x < 848 and 0 < (self.dep[y, x] / 10) < 100:
+                self.hand_depth = self.dep[y, x] / 10
 
-            if self.hand_depth is not None:
-                #Convertion of values 
-                self.hand_position = self.max_coord[0] / self.image_width, 1-(self.max_coord[1] / self.image_height), self.hand_depth / 60
-                self.hand_position = round(self.hand_position[0],3), round(self.hand_position[1],3), round(self.hand_position[2],3)
-                #edge cases
-                if self.hand_position[0] > 1.0: self.hand_position = 1.0, self.hand_position[1], self.hand_position[2]
-                if self.hand_position[1] > 1.0: self.hand_position = self.hand_position[0], 1.0, self.hand_position[2]
-                if self.hand_position[2] > 1.0: self.hand_position = self.hand_position[0], self.hand_position[1] ,1.0
-                if self.hand_position[0] < 0.0: self.hand_position = 0.0, self.hand_position[1], self.hand_position[2]
-                if self.hand_position[1] < 0.0: self.hand_position = self.hand_position[0], 0.0, self.hand_position[2]
-                if self.hand_position[2] < 0.0: self.hand_position = self.hand_position[0], self.hand_position[1], 0.0
+        # Conversion of values
+        self.hand_position = (
+            self.max_coord[0] / self.image_width,
+            1 - (self.max_coord[1] / self.image_height),
+            self.hand_depth / 60
+        )
+        self.hand_position = tuple(round(max(0.0, min(value, 1.0)), 3) for value in self.hand_position)
 
+
+
+    def publish(self):
+        
+        #Coordinates publisher
         self.position_msg.data = self.hand_position
         if self.hand_position is not None:
-            self.hand_position_pub.publish(str(self.hand_position))
             msg = 'Hand position: '+ str(self.hand_position)
             self.status.publish(msg)
-            self.hand_position_pub2.publish(self.position_msg)
+            self.hand_position_pub.publish(self.position_msg)
 
     def camera_callback(self,data):
         try:

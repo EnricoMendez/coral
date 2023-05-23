@@ -20,8 +20,7 @@ class tracker_node():
         ### Publishers
         self.hand_position_pub = rospy.Publisher("/hand_track/hand_position", Float32MultiArray, queue_size=1)
         self.status = rospy.Publisher("/hand_track/status", String, queue_size=1)
-        #self.image_position_pub = rospy.Publisher("image_position", Image, queue_size=1)
-        
+
         ### Constants
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_hands = mp.solutions.hands
@@ -105,7 +104,7 @@ class tracker_node():
                 if 100 >  (self.dep[y, x] / 10) > 0:
                     self.hand_depth = self.dep[y, x] / 10
 
-        if self.hand_depth is not None:
+        if self.hand_depth is not None and self.max_coord[0] is not None:
             # Conversion of values
             x_ratio = self.max_coord[0] / self.image_width
             y_ratio = 1 - (self.max_coord[1] / self.image_height)
@@ -122,6 +121,7 @@ class tracker_node():
             depth_ratio = round(depth_ratio, 3)
 
             self.hand_position = x_ratio, y_ratio, depth_ratio
+
 
     def publish(self):
 

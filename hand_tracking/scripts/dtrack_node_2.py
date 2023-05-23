@@ -106,12 +106,13 @@ class tracker_node():
                 self.hand_depth = self.dep[y, x] / 10
 
         # Conversion of values
-        self.hand_position = (
-            self.max_coord[0] / self.image_width,
-            1 - (self.max_coord[1] / self.image_height),
-            self.hand_depth / 60
-        )
-        self.hand_position = tuple(round(max(0.0, min(value, 1.0)), 3) for value in self.hand_position)
+        if self.hand_depth is not None:
+            self.hand_position = (
+                self.max_coord[0] / self.image_width,
+                1 - (self.max_coord[1] / self.image_height),
+                self.hand_depth / 60
+            )
+            self.hand_position = tuple(round(max(0.0, min(value, 1.0)), 3) for value in self.hand_position)
 
 
 

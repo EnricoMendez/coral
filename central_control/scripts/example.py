@@ -1,8 +1,10 @@
-import pyttsx3
+from gtts import gTTS
+import os
 
-engine = pyttsx3.init(driverName='espeak')
-engine.setProperty('voice', 'google')  # Configura el motor de voz de Google Text-to-Speech
+text = "Hello, its me"
 
-# Continuar con el uso de pyttsx3
-engine.say("Hello! I am a voice from Google Text-to-Speech.")
-engine.runAndWait()
+tts = gTTS(text, lang='en-us')
+tts.save('output.mp3')
+
+os.system('mpg123 output.mp3 > /dev/null 2>&1')  # Reproduce el archivo de audio utilizando mpg123 o utiliza tu reproductor de audio preferido
+

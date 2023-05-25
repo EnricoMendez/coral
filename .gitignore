@@ -349,3 +349,4 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 .vscode/
+central_control/scripts/deepspeech-0.9.3-models.pbmm

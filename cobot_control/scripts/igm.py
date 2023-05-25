@@ -46,24 +46,24 @@ class igm():
 
         for q in q_sols:
             if q1min > q[0]  or q[0] > q1max or math.isnan(q[0]): 
-                print('Fails in q1')
-                print(q[0])
+                # print('Fails in q1')
+                # print(q[0])
                 continue
             if q2min > q[1]  or q[1] > q2max or math.isnan(q[1]):
-                print('Fails in q2')
-                print(q[1])
+                # print('Fails in q2')
+                # print(q[1])
                 continue
             if q3min > q[2]  or q[2] > q3max or math.isnan(q[2]):
-                print('Fails in q3')
-                print(q[2])
+                # print('Fails in q3')
+                # print(q[2])
                 continue
             if q4min > q[3]  or q[3] > q4max or math.isnan(q[3]):
-                print('Fails in q4')
-                print(q[3])
+                # print('Fails in q4')
+                # print(q[3])
                 continue
             return q
         
-        print('Not any solution')
+        # print('Not any solution')
         home = [math.pi/2,-math.pi/2,math.pi/2,-math.pi/2,-math.pi/2,0]
         return home
 

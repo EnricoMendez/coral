@@ -100,9 +100,10 @@ class tracker_node():
         if self.max_coord[0] is not None:
             x = int(self.max_coord[0] * self.depx / self.image_width)
             y = int(self.max_coord[1] * self.depy / self.image_height)
-            if (0 < y < 480) and (0 < x < 848):
-                if 100 >  (self.dep[y, x] / 10) > 0:
+            if (0 < y < self.depy) and (0 < x < self.depx):
+                if 100 > (self.dep[y, x] / 10) > 0:
                     self.hand_depth = self.dep[y, x] / 10
+
 
         if self.hand_depth is not None and self.max_coord[0] is not None:
             # Conversion of values

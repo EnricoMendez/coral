@@ -133,6 +133,7 @@ class zimmer():
             while not self.command == 'go':
                 pass
             self.message_pub.publish(22)
+            self.clean()
             self.take_flag = False
             self.mute = True
             return False
@@ -213,7 +214,7 @@ class zimmer():
         self.mute = True
         self.message_pub.publish(self.object_class)
         if self.object_class == 8:
-            self.status_pub.publish('No object detected')
+            self.status_pub.publish('Unknown object')
             time.sleep(7)
             self.status_pub.publish('Say go to release the piece')
             time.sleep(1)
@@ -227,6 +228,8 @@ class zimmer():
             return
         if not self.capacity_check(self.object_class):
             return
+        msg = 'I identified piece '+ str(self.object_class)+'I will store it'
+        self.status_pub.publish(msg)
         time.sleep(15)
         self.take_flag = False
 

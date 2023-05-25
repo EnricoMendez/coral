@@ -182,7 +182,7 @@ class TrajectoryClient:
         
         x1 = 0.2297
         y1 = -0.6430
-        z1 = 0.3849
+        z1 = 0.44
         
 
         rx = 0
@@ -190,8 +190,8 @@ class TrajectoryClient:
         rz = 0
 
         x = round(msg.data[0],4)
-        y = round(msg.data[1],4)
-        z = round(msg.data[2],4)
+        y = 0.5 #round(msg.data[2],4)
+        z = round(msg.data[1],4)+0.2
 
         self.posex = round(x * (x1-x0) + x0,4) * 1000
         self.posey = round(y * (y1-y0) + y0,4) * 1000

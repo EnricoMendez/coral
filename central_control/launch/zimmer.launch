@@ -15,7 +15,7 @@
   <node name="zimmer_node" pkg="central_control" type="zimmer.py" output="log">
   </node>
 
-  <node name="hand_track" pkg="hand_tracking" type="dtrack_node_2.py" output="log">
+  <node name="hand_track" pkg="hand_tracking" type="dtrack_node.py" output="log">
   </node>
   
   <node name="Object_classification" pkg="object_classification" type="object_class_node.py" output="log">

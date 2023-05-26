@@ -1,136 +1,160 @@
 #!/usr/bin/env python3
-import mediapipe as mp
-import numpy as np
-import cv2
-import rospy 
-import os
-from std_msgs.msg import String
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge, CvBridgeError
+
+# Import necessary libraries and modules
+import mediapipe as mp  
+import numpy as np  
+import cv2  
+import rospy  
+import os 
+from cvzone.HandTrackingModule import HandDetector 
+from std_msgs.msg import String, Float32MultiArray  
+from sensor_msgs.msg import Image  
+from cv_bridge import CvBridge, CvBridgeError 
 
 class tracker_node():
     def __init__(self):
-        rospy.on_shutdown(self.cleanup) 
-        ### Suscriber
-        self.image_sub = rospy.Subscriber("/camera/color/image_raw",Image,self.camera_callback) 
-        self.depth_sub = rospy.Subscriber("/camera/depth/image_rect_raw", Image, self.dep_image_callback)
-        
-        ### Publishers
-        self.hand_position_pub = rospy.Publisher("hand_position", String, queue_size=1)
-        self.image_position_pub = rospy.Publisher("image_position", Image, queue_size=1)
-        
-        ### Constants
-        self.mp_drawing = mp.solutions.drawing_utils
-        self.mp_hands = mp.solutions.hands
-        self.bridge_object = CvBridge() # create the cv_bridge object
-        self.font = cv2.FONT_HERSHEY_SIMPLEX
-        self.fontScale = 0.5
-        self.color = (0,0,0)
-        self.thickness = 1
-        
-        ### Variables
-        self.image_received = 0
-        self.dep_received = 0
-        self.coordinates_hands = np.zeros((2,1))
-        self.max_coord = ''
-        self.coordx = 0
-        self.coordy = 0
-        
-        ###********** INIT NODE **********###  
-        r = rospy.Rate(10)
-        print('initialized node')
+        # Initialize ROS node and set up subscribers and publishers
+        rospy.on_shutdown(self.cleanup)  # Set cleanup method to be called when node is shutting down
+        self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.camera_callback)  
+        self.depth_sub = rospy.Subscriber("/camera/depth/image_rect_raw", Image, self.dep_image_callback) 
+        self.hand_position_pub = rospy.Publisher("/hand_track/hand_position", Float32MultiArray, queue_size=1) 
+        self.status = rospy.Publisher("/hand_track/status", String, queue_size=1)
 
+        # Constants and variables
+        self.mp_drawing = mp.solutions.drawing_utils  # Drawing utilities from Mediapipe
+        self.mp_hands = mp.solutions.hands  # Hands module from Mediapipe
+        self.bridge_object = CvBridge()  # OpenCV and ROS image conversion
+        self.detector = HandDetector(detectionCon=0.8, maxHands=2)  # Hand detector object with parameters
+        self.image_received = 0  # Flag to check if color image is received
+        self.dep_received = 0  # Flag to check if depth image is received
+        self.centerPoint2 = None  # Center point of the second hand
+        self.centerPoint1 = None  # Center point of the first hand
+        self.max_coord = (None, None)  # Maximum coordinates of the detected hand
+        self.hands_array = None  # Array containing the center points of both hands
+        self.hand_depth = None  # Depth value of the detected hand
+        self.coord_x_hand1 = 0  # X-coordinate of the first hand
+        self.coord_x_hand2 = 0  # X-coordinate of the second hand
+        self.coord_y_hand1 = 0  # Y-coordinate of the first hand
+        self.coord_y_hand2 = 0  # Y-coordinate of the second hand
+        self.hand1 = None  # Data dictionary for the first hand
+        self.hand2 = None  # Data dictionary for the second hand
+        self.hand_position = None  # Hand position (x_ratio, y_ratio, depth_ratio)
+        self.position_msg = Float32MultiArray()  # ROS message for hand position
+
+        # Initialize the ROS node
+        rospy.init_node('tracker_node', anonymous=True)
+        r = rospy.Rate(20)  # Rate at which the node runs
+
+        # Main loop of the node
         while not rospy.is_shutdown():
             if self.image_received * self.dep_received == 0:
-                print(self.dep_received)
-                print(self.image_received)
-                print('Image not received')
+                self.status.publish('Image not received')
                 continue
-            with self.mp_hands.Hands(min_detection_confidence=0.6, min_tracking_confidence=0.5) as self.hands: 
-                self.image_processing()
-                self.publish()
-            r.sleep()
+            self.cv_image = cv2.flip(self.cv_image, 1)  # Flip the color image horizontally
+            self.hands, nimage = self.detector.findHands(self.cv_image, flipType=1)  # Detect hands in the flipped image
+            self.image_processing()  # Perform image processing
+            self.publish()  # Publish the hand position
+            r.sleep()  # Sleep to maintain the rate of the node
 
-    def rising_hand(self,array1):
-        max = np.argmax(array1[1])
-        coord = array1[:,max]
-        self.coordx = int(coord[0])
-        self.coordy = self.image_height - int(coord[1]) 
-        self.max_coord = str(self.coordx)+','+str(self.coordy)
-        
+    def risen_hand(self, hands_array):
+        # Determine the hand with the highest y-coordinate (closest to the top of the image)
+        if hands_array[1] is None:
+            return hands_array[0]
+        else:
+            return min((hands_array[0], hands_array[1]), key=lambda x: x[1])
+
     def image_processing(self):
-        
-        self.dep = self.depth_array
-        image = self.cv_image
-        # BGR 2 RGB
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        # Flip on horizontal
-        # image = cv2.flip(image, 1)
-        # Set flag
-        image.flags.writeable = False
-        # Detections
-        results = self.hands.process(image)
-        # Set flag to true
-        image.flags.writeable = True
-        # RGB 2 BGR
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        
-        # Rendering results
-        if results.multi_hand_landmarks:                         
-            
-            i = 0
-            
-            for hand_landmarks in results.multi_hand_landmarks:
-                #Obtain coordinates of middle finger MCP
-                x = hand_landmarks.landmark[self.mp_hands.HandLandmark.MIDDLE_FINGER_MCP].x * self.image_width
-                y = self.image_height - (hand_landmarks.landmark[self.mp_hands.HandLandmark.MIDDLE_FINGER_MCP].y * self.image_height)
-                self.coordinates_hands = np.insert(self.coordinates_hands, i, [x,y], axis=1)               
-                i = i+1        
+        # Process the color and depth images to obtain hand position and depth
 
-            self.rising_hand(self.coordinates_hands)
-            image = cv2.circle(image, (self.coordx,self.coordy), 10, (0,0,255), 3)
+        self.max_coord = None, None
+        self.hands_array = None, None
+        self.centerPoint1 = None
+        self.centerPoint2 = None
+        self.dep = self.depth_array  # Depth array from the depth image
 
-        # Publish image    
-        self.image_message = self.bridge_object.cv2_to_imgmsg(image, encoding="passthrough")
-        
-        self.coordinates_hands = np.zeros((2,1))
-    
+        if self.hands:  # If hands are detected
+            self.hand1 = self.hands[0]  # Data dictionary for the first hand
+            self.coord_x_hand1 = self.hand1["lmList"][9][0]  # X-coordinate of the tip of the index finger of the first hand
+            self.coord_y_hand1 = self.hand1["lmList"][9][1]  # Y-coordinate of the tip of the index finger of the first hand
+            self.centerPoint1 = (self.coord_x_hand1, self.coord_y_hand1)  # Center point of the first hand
+
+            if len(self.hands) == 2:  # If two hands are detected
+                self.hand2 = self.hands[1]  # Data dictionary for the second hand
+                self.coord_x_hand2 = self.hand2["lmList"][9][0]  # X-coordinate of the tip of the index finger of the second hand
+                self.coord_y_hand2 = self.hand2["lmList"][9][1]  # Y-coordinate of the tip of the index finger of the second hand
+                self.centerPoint2 = (self.coord_x_hand2, self.coord_y_hand2)  # Center point of the second hand
+
+            self.hands_array = (self.centerPoint1, self.centerPoint2)  # Array containing the center points of both hands
+            self.max_coord = self.risen_hand(self.hands_array)  # Get the hand with the highest y-coordinate
+
+            # Ensure that the coordinates are within the image bounds
+            for v in self.max_coord:
+                if v < 0:
+                    v = 0
+            if self.max_coord[0] > self.image_width:
+                self.max_coord = self.image_width, self.max_coord[1]
+            if self.max_coord[1] > self.image_height:
+                self.max_coord = self.max_coord[0], self.image_height
+
+        if self.max_coord[0] is not None:  # If a hand is detected
+            x = int(self.max_coord[0] * self.depx / self.image_width)  # Calculate x-coordinate in depth image
+            y = int(self.max_coord[1] * self.depy / self.image_height)  # Calculate y-coordinate in depth image
+            if (0 < y < self.depy) and (0 < x < self.depx):  # Ensure coordinates are within depth image bounds
+                if 100 > (self.dep[y, x] / 10) > 0:  # Convert depth value from mm to cm
+                    self.hand_depth = self.dep[y, x] / 10
+
+        if self.hand_depth is not None and self.max_coord[0] is not None:  # If hand depth and position are available
+            # Conversion of values
+            x_ratio = self.max_coord[0] / self.image_width  # X-coordinate ratio (0.0 to 1.0)
+            y_ratio = 1 - (self.max_coord[1] / self.image_height)  # Y-coordinate ratio (0.0 to 1.0)
+            depth_ratio = self.hand_depth / 60  # Depth ratio (0.0 to 1.0)
+
+            # Limit values to range [0.0, 1.0]
+            x_ratio = max(0.0, min(x_ratio, 1.0))
+            y_ratio = max(0.0, min(y_ratio, 1.0))
+            depth_ratio = max(0.0, min(depth_ratio, 1.0))
+
+            # Round values to 3 decimal places
+            x_ratio = round(x_ratio, 3)
+            y_ratio = round(y_ratio, 3)
+            depth_ratio = round(depth_ratio, 3)
+
+            self.hand_position = x_ratio, y_ratio, depth_ratio  # Hand position as (x_ratio, y_ratio, depth_ratio)
+
     def publish(self):
-       
-        # Image publisher
-        self.image_position_pub.publish(self.image_message)
-        
-        os.system('clear') 
-        print('Max coord: ',self.max_coord)
-        
-        # Depth hand calculation
-        if self.coordx * self.coordy > 0:
-            x = self.coordx * self.depx / self.image_width
-            y = self.coordy * self.depy / self.image_height
+        # Publish the hand position as a ROS message
 
-            self.hand_depth = self.dep[int(y),int(x)] / 10
-            #print(self.dep.shape)
-            print('The hand is at {} cm'.format(self.hand_depth))
+        self.position_msg.data = self.hand_position  # Set the position data in the ROS message
+        if self.hand_position is not None:  # If hand position is available
+            msg = 'Hand position: ' + str(self.hand_position)  # Create status message
+            self.status.publish(msg)  # Publish the status message
+            self.hand_position_pub.publish(self.position_msg)  # Publish the hand position message
 
-    def camera_callback(self,data):
+    def camera_callback(self, data):
+        # Callback function for the color image subscriber
+
         try:
-            self.cv_image = self.bridge_object.imgmsg_to_cv2(data, desired_encoding="bgr8")
+            self.cv_image = self.bridge_object.imgmsg_to_cv2(data, desired_encoding="bgr8")  # Convert ROS image to OpenCV image
         except CvBridgeError as e:
-            print(e) 
-        if self.image_received == 0:
-            self.image_height, self.image_width, c = self.cv_image.shape 
-            self.image_received = 1
+            self.status.publish(e)
 
-    def dep_image_callback(self,dep_image):
-        self.depth_array = np.frombuffer(dep_image.data, dtype=np.uint16).reshape((dep_image.height, dep_image.width))
-        if self.dep_received == 0:
-            self.depy, self.depx = dep_image.height, dep_image.width
-            self.dep_received = 1
+        if self.image_received == 0:  # If color image is not received before
+            self.image_height, self.image_width, c = self.cv_image.shape  # Get image dimensions
+            self.image_received = 1  # Set the flag to indicate that color image is received
+
+    def dep_image_callback(self, dep_image):
+        # Callback function for the depth image subscriber
+
+        self.depth_array = np.frombuffer(dep_image.data, dtype=np.uint16).reshape((dep_image.height, dep_image.width))  # Convert depth image to depth array
+
+        if self.dep_received == 0:  # If depth image is not received before
+            self.depy, self.depx = dep_image.height, dep_image.width  # Get depth image dimensions
+            self.dep_received = 1  # Set the flag to indicate that depth image is received
 
     def cleanup(self):
-               
-        print('Node killed successfully')
+        # Cleanup method called when the node is shutting down
 
-if __name__ == "__main__":  
-    rospy.init_node('tracker_node', anonymous=True)
-    tracker_node() 
+        self.status.publish('Node killed successfully')  # Publish status message
+
+if __name__ == "__main__":
+    tracker_node()  # Create an instance of the tracker_node class and start the node

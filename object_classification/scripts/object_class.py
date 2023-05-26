@@ -5,18 +5,18 @@ import os
 
 confidence_threshold = 0.80
 piece = 0
-model = tensorflow.keras.models.load_model("imageclassifier.h5", compile=False)
-camera = cv2.VideoCapture(0)
+model = tensorflow.keras.models.load_model("imageclassifier0.h5", compile=False)
+camera = cv2.VideoCapture(1)
 
 def image_process():
     ret, image = camera.read()
     # Resize the raw image into (224-height,224-width) pixels
-    image = cv2.resize(image, (256, 256), interpolation=cv2.INTER_AREA)
+    image = cv2.resize(image, (224, 224), interpolation=cv2.INTER_AREA)
     # Change brightness and contrast of image
     image = cv2.addWeighted(image, 3., image, 0., 1.)      
     cv2.imshow("Object classification", image)  
     # Make the image a numpy array and reshape it to the models input shape.
-    image = np.asarray(image, dtype=np.float32).reshape(1, 256, 256, 3)
+    image = np.asarray(image, dtype=np.float32).reshape(1, 224, 224, 3)
     # Normalize the image array
     image = (image / 127.5) - 1
     return(image)
@@ -59,7 +59,6 @@ while (True):
     keyboard_input = cv2.waitKey(10)
     if keyboard_input == 27 :
         break
-
     ##
 
 camera.release()

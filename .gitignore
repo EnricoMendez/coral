@@ -350,3 +350,5 @@ MigrationBackup/
 .ionide/
 .vscode/
 central_control/scripts/deepspeech-0.9.3-models.pbmm
+central_control/scripts/deepspeech-0.9.3-models.tflite
+

@@ -18,7 +18,7 @@
   <node name="hand_track" pkg="hand_tracking" type="dtrack_node.py" output="log">
   </node>
   
-  <node name="Object_classification" pkg="object_classification" type="object_class_node.py" output="log">
+  <node name="Object_classification" pkg="object_classification" type="object_classification.py" output="log">
   </node>
 
   <node name="Voice_commands" pkg="voice_recognition" type="voice_recognition_node.py" output="log">

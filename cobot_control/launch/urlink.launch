@@ -1,8 +1,0 @@
-<launch>
-  <include file="$(find ur_robot_driver)/launch/ur5e_bringup.launch">
-    <arg name="robot_ip" value="192.168.0.102" />
-  </include>
-
-  <node pkg="cobot_control" type="move_node.py" name="move_node" respawn="true" output="screen"/>
-  
-</launch>

@@ -8,7 +8,6 @@ from std_msgs.msg import String
 from std_msgs.msg import Int32
 import time
 import statistics
-import os
 
 
 class zimmer():

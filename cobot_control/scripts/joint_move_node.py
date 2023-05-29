@@ -5,8 +5,6 @@ import sys
 from math import *
 from igm import *
 import actionlib
-from func import *
-import time
 import geometry_msgs.msg as geometry_msgs
 import rospy
 from std_msgs.msg import Float32MultiArray
@@ -74,10 +72,9 @@ class TrajectoryClient:
         self.best = 0
 
         rospy.init_node("move_node")
-        print('Node init')
+        
 
         rospy.Subscriber("/coordinates_coral",Float32MultiArray,self.callback_coordinates)
-        # rospy.Subscriber("/handtrack",Float32MultiArray,self.callback_coordinates)
         self.flag_pub=rospy.Publisher("flag_coordinates",String,queue_size=10)
         self.finish_pub=rospy.Publisher("move_finish",String,queue_size=10)
         self.status_pub=rospy.Publisher("/move/status",String,queue_size=10)
@@ -201,7 +198,6 @@ class TrajectoryClient:
         U_params = [self.posex,self.posey,self.posez, rx,ry,rz]
         U = self.igm.vec2rot(U_params[3:6])
         U[:3, 3] = U_params[0:3]
-        print(U_params)
 
         Q = []
         for i in range(1,9):
@@ -211,7 +207,6 @@ class TrajectoryClient:
             for number in element:
                 solution.append(round(number[0],4))
             Q.append(solution)
-            print(solution)
         
         self.best = self.igm.select(Q,home)
         

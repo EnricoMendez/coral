@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 
-
 import sys
-from math import *
-from igm import *
+from math import pi
+
 import actionlib
 import geometry_msgs.msg as geometry_msgs
 import rospy
-from std_msgs.msg import Float32MultiArray
-from std_msgs.msg import String
 from cartesian_control_msgs.msg import (CartesianTrajectoryPoint,
                                         FollowCartesianTrajectoryAction,
                                         FollowCartesianTrajectoryGoal)
@@ -19,8 +16,10 @@ from controller_manager_msgs.srv import (ListControllers,
                                          LoadController, LoadControllerRequest,
                                          SwitchController,
                                          SwitchControllerRequest)
+from std_msgs.msg import Float32MultiArray, String
 from trajectory_msgs.msg import JointTrajectoryPoint
 
+from igm import igm
 
 # If your robot description is created with a tf_prefix, those would have to be adapted
 JOINT_NAMES = [
@@ -57,28 +56,37 @@ CONFLICTING_CONTROLLERS = ["joint_group_vel_controller", "twist_controller"]
 class TrajectoryClient:
     
     def __init__(self):
-        ### Constantes
-        self.igm = igm()
         rospy.on_shutdown(self.cleanup)
-        self.flag = True
+        ### Constants
+        self.igm = igm()
+
+        self.rx = 0
+        self.ry =-pi
+        self.rz = 0
+
+        self.x0 = -0.22275
+        self.y0 = -0.42281
+        self.z0 = 0.129553
+        
+        self.x1 = 0.2297
+        self.y1 = -0.6430
+        self.z1 = 0.44
+        
+        # Variables
         self.posex = 0
         self.posey = 0
         self.posez = 0
-
-        self.ori_x= 0.0004947227089390941
-        self.ori_y= -0.9999966483194065
-        self.ori_z= 0.0007266061044373305
-        self.ori_w= 0.0024352911455313847
-        self.best = 0
-
-        rospy.init_node("move_node")
         
 
+        # Suscribers
         rospy.Subscriber("/coordinates_coral",Float32MultiArray,self.callback_coordinates)
+        
+        # Publishers
         self.flag_pub=rospy.Publisher("flag_coordinates",String,queue_size=10)
         self.finish_pub=rospy.Publisher("move_finish",String,queue_size=10)
         self.status_pub=rospy.Publisher("/move/status",String,queue_size=10)
 
+        
 
         timeout = rospy.Duration(5)
         self.switch_srv = rospy.ServiceProxy(
@@ -173,29 +181,15 @@ class TrajectoryClient:
     def callback_coordinates(self,msg):
         self.status_pub.publish('I recieved coordinates')
 
-        x0 = -0.22275
-        y0 = -0.42281
-        z0 = 0.129553
-        
-        x1 = 0.2297
-        y1 = -0.6430
-        z1 = 0.44
-        
-
-        rx = 0
-        ry =-pi
-        rz = 0
-
         x = round(msg.data[0],4)
-        y = 0.5 #round(msg.data[2],4)
+        y = 0.5
         z = round(msg.data[1],4)+0.2
 
-        self.posex = round(x * (x1-x0) + x0,4) * 1000
-        self.posey = round(y * (y1-y0) + y0,4) * 1000
-        self.posez = round(z * (z1-z0) + z0,4) * 1000
+        self.posex = round(x * (self.x1-self.x0) + self.x0,4) * 1000
+        self.posey = round(y * (self.y1-self.y0) + self.y0,4) * 1000
+        self.posez = round(z * (self.z1-self.z0) + self.z0,4) * 1000
 
-        home = [pi/2,-pi/2,pi/2,-pi/2,-pi/2,0]
-        U_params = [self.posex,self.posey,self.posez, rx,ry,rz]
+        U_params = [self.posex,self.posey,self.posez, self.rx,self.ry,self.rz]
         U = self.igm.vec2rot(U_params[3:6])
         U[:3, 3] = U_params[0:3]
 
@@ -208,18 +202,16 @@ class TrajectoryClient:
                 solution.append(round(number[0],4))
             Q.append(solution)
         
-        self.best = self.igm.select(Q,home)
-        
-        self.status_pub.publish(self.best)
-
-        msg = str('Coordinates: ('+str(self.posex)+','+str(self.posey)+','+str(self.posez)+')')
-        self.status_pub.publish(msg)
+        self.best = self.igm.select(Q)
         self.send_joint_trajectory()
 
 
 
 
 if __name__ == "__main__":
+    
+    # Node init
+    rospy.init_node("Move_node")
     
     client = TrajectoryClient()
 

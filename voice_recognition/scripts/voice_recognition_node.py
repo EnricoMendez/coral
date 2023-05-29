@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
-import rospy
-from std_msgs.msg import String
-import tensorflow as tf
-import numpy as np
 import re
-import serial
-import numpy as np
-import matplotlib.pyplot as plt
 import time
+
+import matplotlib.pyplot as plt
+import numpy as np
 import rospkg
+import rospy
+import serial
+import tensorflow as tf
+from std_msgs.msg import String
 
 
 class voice_recognition():

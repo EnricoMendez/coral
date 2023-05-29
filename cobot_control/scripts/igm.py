@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+
 import math
 import numpy as np
-
 
 
 class igm():
@@ -16,13 +16,12 @@ class igm():
         self.D5 = 99.7
         self.D6 = 99.6 + 175.5
 
-    def select(self,q_sols, q_d, w=[1]*6):
+    def select(self,q_sols, w=[1]*6):
         """Select the optimal solutions among a set of feasible joint value 
         solutions.
 
         Args:
             q_sols: A set of feasible joint value solutions (unit: radian)
-            q_d: A list of desired joint value solution (unit: radian)
             w: A list of weight corresponding to robot joints
 
         Returns:
@@ -40,9 +39,6 @@ class igm():
 
         q4max = -60  * math.pi / 180
         q4min = -120    * math.pi / 180
-
-
-
 
         for q in q_sols:
             if q1min > q[0]  or q[0] > q1max or math.isnan(q[0]): 
@@ -66,15 +62,6 @@ class igm():
         # print('Not any solution')
         home = [math.pi/2,-math.pi/2,math.pi/2,-math.pi/2,-math.pi/2,0]
         return home
-
-
-
-
-        # error = []
-        # for q in q_sols:
-        #     error.append(sum([w[i] * (q[i] - q_d[i]) ** 2 for i in range(6)]))
-        
-        # return q_sols[error.index(min(error))]
 
     def int2bit(self,X, n):
         Y = []

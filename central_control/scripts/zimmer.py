@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-import roslaunch
-import rospy
-import rospkg
-from std_msgs.msg import Int32MultiArray
-from std_msgs.msg import Float32MultiArray
-from std_msgs.msg import String
-from std_msgs.msg import Int32
-import time
+
+"""
+Module: zimmer
+Author: A Enrico Mendez <enrico.mendez@outlook.es>
+Created: 29-05-2023
+"""
+
 import statistics
+import time
+
+import roslaunch
+import rospkg
+import rospy
+from std_msgs.msg import Float32MultiArray, Int32, Int32MultiArray, String
 
 
 class zimmer():

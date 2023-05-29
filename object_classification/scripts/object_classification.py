@@ -13,13 +13,6 @@ import time
 class object_cls_node():
     def __init__(self):
         rospy.on_shutdown(self.cleanup) 
-        ### Subscriber
-        self.image_sub = rospy.Subscriber("/usb_cam/image_raw", Image, self.camera_callback) 
-        
-        ### Publishers
-        self.object_num_pub = rospy.Publisher("object_num", Int32, queue_size=1)
-        self.status = rospy.Publisher("/object_class/status", String, queue_size=1)
-        
         ### Constants
         self.confidence_threshold = 0.75
         # Get an instance of RosPack with the default search paths
@@ -38,8 +31,15 @@ class object_cls_node():
         self.bridge_object = CvBridge() # Create the cv_bridge object
         self.cv_image = 0
 
+        ### Subscriber
+        self.image_sub = rospy.Subscriber("/usb_cam/image_raw", Image, self.camera_callback) 
+        
+        ### Publishers
+        self.object_num_pub = rospy.Publisher("object_num", Int32, queue_size=1)
+        self.status = rospy.Publisher("/object_class/status", String, queue_size=1)
+
         ###********** INIT NODE **********###  
-        r = rospy.Rate(10)
+        r = rospy.Rate(20)
         self.status.publish('Initialized node')
 
         while not rospy.is_shutdown():

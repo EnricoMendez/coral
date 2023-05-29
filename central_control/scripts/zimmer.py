@@ -17,19 +17,6 @@ from std_msgs.msg import Float32MultiArray, Int32, Int32MultiArray, String
 
 class zimmer():
     def __init__(self):
-        
-        ###******* INIT PUBLISHERS *******###  
-        self.coord_pub=rospy.Publisher("coordinates_coral",Float32MultiArray,queue_size=10)
-        self.message_pub = rospy.Publisher('arduino_commands',Int32,queue_size=10)
-        self.status_pub = rospy.Publisher('/zimmer/status',String,queue_size=10)
-        self.inventory_pub = rospy.Publisher('/zimmer/inventory',Int32MultiArray,queue_size=10)
-
-        ############################### SUBSCRIBERS #####################################   
-        self.sub1 = rospy.Subscriber("/flag_coordinates",String,self.flag_callback) 
-        self.sub2 = rospy.Subscriber("/move_finish",String,self.finish_callback) 
-        self.sub3 = rospy.Subscriber("/voice_commands",String,self.vr_callback)
-        self.sub4 = rospy.Subscriber("/hand_track/hand_position",Float32MultiArray,self.hand_track_callback)
-        self.sub5 = rospy.Subscriber("/object_num",Int32,self.obj_num_callback)
 
         ### Constants
         rospy.on_shutdown(self.cleanup)
@@ -52,7 +39,6 @@ class zimmer():
         self.take_flag = False
         self.inv_msg = Int32MultiArray()
         self.inv_msg.data = self.inventory
-        self.inventory_pub.publish(self.inv_msg)
         self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
         self.coordinates = 0
         self.object_class = 0
@@ -63,9 +49,22 @@ class zimmer():
         self.mute = True
         ans = 'no'
 
+        ### Publishers
+        self.coord_pub=rospy.Publisher("coordinates_coral",Float32MultiArray,queue_size=10)
+        self.message_pub = rospy.Publisher('arduino_commands',Int32,queue_size=10)
+        self.status_pub = rospy.Publisher('/zimmer/status',String,queue_size=10)
+        self.inventory_pub = rospy.Publisher('/zimmer/inventory',Int32MultiArray,queue_size=10)
+
+        ### Suscribers 
+        self.sub1 = rospy.Subscriber("/flag_coordinates",String,self.flag_callback) 
+        self.sub2 = rospy.Subscriber("/move_finish",String,self.finish_callback) 
+        self.sub3 = rospy.Subscriber("/voice_commands",String,self.vr_callback)
+        self.sub4 = rospy.Subscriber("/hand_track/hand_position",Float32MultiArray,self.hand_track_callback)
+        self.sub5 = rospy.Subscriber("/object_num",Int32,self.obj_num_callback)
         
-        ### Main loop ###
-        self.status_pub.publish('Zimmer initialized')
+        ### Calibration routine
+        self.inventory_pub.publish(self.inv_msg)
+        self.status_pub.publish('Coral initialized')
         self.Ur_bring.start()
         self.status_pub.publish('Comunication initialized')
         while ans != '':
@@ -82,8 +81,9 @@ class zimmer():
             ans = input()
         self.inventory_pub.publish(self.inv_msg)
         
+        ### Main loop
         r = rospy.Rate(10)
-        self.status_pub.publish('Node initialized')
+        self.status_pub.publish('Welcome, coral is ready to recive instructions')
         while not rospy.is_shutdown():
             if self.com_flag:
                 self.status_pub.publish('Waiting for take or bring command')
@@ -129,8 +129,8 @@ class zimmer():
         else:
             msg = 'No more space available for piece ' + str(piece)
             self.status_pub.publish(msg)
-            time.sleep(5)
-            self.status_pub.publish('Say go to release the piece')
+            time.sleep(7)
+            self.status_pub.publish('Say go to open the gripper')
             time.sleep(2)
             self.clean()
             self.mute = False
@@ -146,10 +146,8 @@ class zimmer():
         self.com_flag = False
         self.Ur_bring.shutdown()
         self.finish_flag = True
-        # self.status_pub.publish('Comunication killed')
         self.Ur_bring = self.launch_file(self.pkg_Ur_bring,self.file_Ur_bring)
         self.Ur_bring.start()
-        # self.status_pub.publish('Comunication initialized')
         self.com_flag = True
 
     def guitar_bring(self):
@@ -165,11 +163,11 @@ class zimmer():
             return
         self.message_pub.publish(object)
         time.sleep(13)
-        # self.status_pub.publish('I will start external control')
         self.piano_ur()
         while not self.finish_flag:
             pass
-        self.status_pub.publish('Waiting for go')
+        self.clean()
+        self.status_pub.publish('Say go to open the gripper')
         time.sleep(1)
         self.mute = False
         while not self.command == 'go':
@@ -191,12 +189,10 @@ class zimmer():
 
     def drums_take(self):
         self.clean()
-        # self.status_pub.publish('I will start external control')
-        # time.sleep(0.2)
         self.piano_ur()
         while not self.finish_flag:
             pass
-        self.status_pub.publish('Waiting for go')
+        self.status_pub.publish('Say go to close the gripper')
         time.sleep(1)
         self.mute = False
         while not self.command == 'go':
@@ -217,9 +213,10 @@ class zimmer():
         self.mute = True
         self.message_pub.publish(self.object_class)
         if self.object_class == 8:
-            self.status_pub.publish('No object detected')
+            self.clean()
+            self.status_pub.publish('Unknown object detected')
             time.sleep(7)
-            self.status_pub.publish('Say go to release the piece')
+            self.status_pub.publish('Say go to open the gripper')
             time.sleep(1)
             self.mute = False
             while not self.command == 'go':
@@ -227,13 +224,13 @@ class zimmer():
             self.mute = True
             self.message_pub.publish(22)
             self.take_flag = False
-
             return
         if not self.capacity_check(self.object_class):
             return
+        msg = 'Piece ' +  str(self.object_class) + 'detected, I will store it'
+        self.status_pub.publish(msg)
         time.sleep(15)
         self.take_flag = False
-
 
     def check_cancel(self):
         if self.command == 'cancel':
@@ -253,13 +250,9 @@ class zimmer():
         self.finish_flag = False
         self.move = self.launch_file(self.pkg_move,self.file_move)
         self.move.start()
-        # self.status_pub.publish('wait for flag')
         while not self.coord_flag:
             pass
-        # self.status_pub.publish('Flag recieved')
         self.coord_flag = False
-
-        
 
     def launch_file(self,pkg,file):
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
@@ -270,8 +263,6 @@ class zimmer():
         output = roslaunch.parent.ROSLaunchParent(uuid, [launch_file])
         return output
     
-
-
     def vr_callback(self,data):
         if self.mute:
             return
@@ -296,7 +287,6 @@ class zimmer():
         else:
             self.index+=1
         self.object_class = statistics.mode(self.object_class_record)
-
 
     def cleanup(self):
         self.status_pub.publish('Node killed')

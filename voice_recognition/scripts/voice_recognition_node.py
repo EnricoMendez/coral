@@ -114,7 +114,7 @@ class voice_recognition():
             self.output_details = self.interpreter.get_output_details()
             self.commands = ['noise','cancel','one','two','three','four','five','six','seven']
             self.status_pub.publish('Changing to numbers interpreter')
-        elif msg == 'Waiting for go'or msg == 'Routine canceled':
+        elif msg == 'Say go to open the gripper'or msg == 'Routine canceled' or msg == 'Say go to close the gripper':
             self.interpreter = self.commands_interpreter
             self.input_details = self.interpreter.get_input_details()
             self.output_details = self.interpreter.get_output_details()

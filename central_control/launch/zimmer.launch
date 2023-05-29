@@ -4,7 +4,7 @@
   <include file="$(find realsense2_camera)/launch/rs_camera.launch" />
 
   <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="log">
-    <param name="video_device" value="/dev/video8" />
+    <param name="video_device" value="/dev/video2" />
     <param name="pixel_format" value="yuyv" />
   </node>
 

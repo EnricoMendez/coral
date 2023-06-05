@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+"""
+Name: depth hand tracking node
+Author: Oscar Ochoa <oscar.ochoa4242@gmail.com>
+Created: 29-05-2023
+"""
+
 # Import necessary libraries and modules
 import mediapipe as mp  
 import numpy as np  

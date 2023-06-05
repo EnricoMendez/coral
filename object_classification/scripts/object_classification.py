@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+
+"""
+Name: depth hand tracking node
+Author: Oscar Ochoa <oscar.ochoa4242@gmail.com>
+Created: 29-05-2023
+"""
+
 import tensorflow
 import cv2
 import numpy as np

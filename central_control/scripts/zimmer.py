@@ -83,7 +83,7 @@ class zimmer():
         
         ### Main loop
         r = rospy.Rate(10)
-        self.status_pub.publish('Welcome, coral is ready to recive instructions')
+        self.status_pub.publish('Welcome, coral is ready to recieve instructions')
         while not rospy.is_shutdown():
             if self.com_flag:
                 self.status_pub.publish('Waiting for take or bring command')
@@ -207,8 +207,6 @@ class zimmer():
         tiempo_actual = time.time()
         self.mute = False
         while tiempo_actual < tiempo_inicial + 6:
-            if self.check_cancel():
-                return
             tiempo_actual = time.time()
         self.mute = True
         self.message_pub.publish(self.object_class)

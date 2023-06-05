@@ -1,5 +1,5 @@
 <launch>
   <include file="$(find ur_robot_driver)/launch/ur5e_bringup.launch" output="log">
-    <arg name="robot_ip" value="192.168.0.102" />
+    <arg name="robot_ip" value="15.44.0.31" />
   </include>
 </launch>
